@@ -10,7 +10,7 @@ data class HabitCheck(
     val habitId: String,
     val userId: String,
     val date: LocalDate,
-    val isCompleted: Boolean = true,
+    val completed: Boolean = true,  // ✅ isCompleted → completed
     val note: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val checkedAt: Long = System.currentTimeMillis()

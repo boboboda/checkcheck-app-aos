@@ -18,7 +18,7 @@ import com.buyoungsil.checkcheck.feature.task.data.local.TaskEntity
         GroupEntity::class,
         TaskEntity::class  // ← 추가
     ],
-    version = 4,  // ← 버전 업
+    version = 5,  // ← 버전 업
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

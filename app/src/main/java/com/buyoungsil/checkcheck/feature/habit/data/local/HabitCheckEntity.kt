@@ -12,7 +12,7 @@ data class HabitCheckEntity(
     val habitId: String,
     val userId: String,
     val date: String,
-    val isCompleted: Boolean,
+    val completed: Boolean,  // ✅ isCompleted → completed
     val note: String?,
     val createdAt: Long
 ) {
@@ -22,7 +22,7 @@ data class HabitCheckEntity(
             habitId = habitId,
             userId = userId,
             date = LocalDate.parse(date),
-            isCompleted = isCompleted,
+            completed = completed,
             note = note,
             createdAt = createdAt
         )
@@ -35,7 +35,7 @@ data class HabitCheckEntity(
                 habitId = check.habitId,
                 userId = check.userId,
                 date = check.date.toString(),
-                isCompleted = check.isCompleted,
+                completed = check.completed,
                 note = check.note,
                 createdAt = check.createdAt
             )

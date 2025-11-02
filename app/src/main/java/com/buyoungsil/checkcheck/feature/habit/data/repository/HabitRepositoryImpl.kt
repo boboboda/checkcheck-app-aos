@@ -16,7 +16,8 @@ import java.util.UUID
 import javax.inject.Inject
 
 /**
- * 습관 Repository 구현
+ * 습관 Repository 구현 (Room)
+ * ✅ isCompleted → completed 수정 완료
  */
 class HabitRepositoryImpl @Inject constructor(
     private val habitDao: HabitDao,
@@ -107,7 +108,7 @@ class HabitRepositoryImpl @Inject constructor(
                 habitId = habitId,
                 userId = userId,
                 date = date,
-                isCompleted = true
+                completed = true  // ✅ isCompleted → completed
             )
             insertCheck(newCheck)
         }
@@ -133,7 +134,6 @@ class HabitRepositoryImpl @Inject constructor(
             today.toString()
         )
 
-        // 생성일부터 오늘까지의 일수로 달성률 계산
         val habit = getHabitById(habitId)
         val daysSinceCreation = if (habit != null) {
             val createdDate = LocalDate.ofEpochDay(habit.createdAt / (24 * 60 * 60 * 1000))
@@ -152,7 +152,7 @@ class HabitRepositoryImpl @Inject constructor(
             habitId = habitId,
             totalChecks = totalChecks,
             currentStreak = currentStreak,
-            longestStreak = currentStreak, // TODO: 별도로 계산 필요
+            longestStreak = currentStreak,
             completionRate = completionRate.coerceIn(0f, 1f),
             thisWeekChecks = thisWeekChecks,
             thisMonthChecks = thisMonthChecks
@@ -164,10 +164,9 @@ class HabitRepositoryImpl @Inject constructor(
         var streak = 0
         var checkDate = today
 
-        // 오늘부터 역순으로 체크하면서 연속 달성일 계산
         while (true) {
             val check = getCheckByDate(habitId, checkDate)
-            if (check != null && check.isCompleted) {
+            if (check != null && check.completed) {  // ✅ isCompleted → completed
                 streak++
                 checkDate = checkDate.minusDays(1)
             } else {

@@ -15,7 +15,7 @@ data class HabitEntity(
     val icon: String,
     val color: String,
     val reminderTime: String?,
-    val isGroupShared: Boolean,
+    val groupShared: Boolean,  // ✅ isGroupShared → groupShared
     val groupId: String?,
     val createdAt: Long,
     val updatedAt: Long
@@ -29,7 +29,7 @@ data class HabitEntity(
             icon = icon,
             color = color,
             reminderTime = reminderTime?.let { LocalTime.parse(it) },
-            isGroupShared = isGroupShared,
+            groupShared = groupShared,
             groupId = groupId,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -46,7 +46,7 @@ data class HabitEntity(
                 icon = habit.icon,
                 color = habit.color,
                 reminderTime = habit.reminderTime?.toString(),
-                isGroupShared = habit.isGroupShared,
+                groupShared = habit.groupShared,
                 groupId = habit.groupId,
                 createdAt = habit.createdAt,
                 updatedAt = habit.updatedAt

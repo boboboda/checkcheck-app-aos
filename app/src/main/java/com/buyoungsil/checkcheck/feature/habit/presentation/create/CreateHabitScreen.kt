@@ -26,8 +26,8 @@ fun CreateHabitScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(uiState.isSuccess) {
-        if (uiState.isSuccess) {
+    LaunchedEffect(uiState.success) {
+        if (uiState.success) {
             onNavigateBack()
         }
     }
@@ -163,13 +163,13 @@ fun CreateHabitScreen(
                                 )
                             }
                             Switch(
-                                checked = uiState.isGroupShared,
+                                checked = uiState.groupShared,
                                 onCheckedChange = { viewModel.onGroupSharedToggle(it) }
                             )
                         }
 
                         // 그룹 선택
-                        if (uiState.isGroupShared) {
+                        if (uiState.groupShared) {
                             Spacer(modifier = Modifier.height(16.dp))
                             Divider()
                             Spacer(modifier = Modifier.height(16.dp))
@@ -260,16 +260,16 @@ fun CreateHabitScreen(
                 Button(
                     onClick = { viewModel.onCreateHabit() },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading
+                    enabled = !uiState.loading
                 ) {
-                    if (uiState.isLoading) {
+                    if (uiState.loading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
                         Text(
-                            if (uiState.isGroupShared) "그룹에 습관 공유하기"
+                            if (uiState.groupShared) "그룹에 습관 공유하기"
                             else "습관 만들기"
                         )
                     }

@@ -1,6 +1,5 @@
 package com.buyoungsil.checkcheck.feature.habit.data.repository
 
-import android.util.Log
 import com.buyoungsil.checkcheck.feature.habit.data.firebase.HabitCheckFirestoreDto
 import com.buyoungsil.checkcheck.feature.habit.data.firebase.HabitFirestoreDto
 import com.buyoungsil.checkcheck.feature.habit.domain.model.Habit
@@ -19,6 +18,7 @@ import javax.inject.Inject
 
 /**
  * Firebase Firestore 기반 Habit Repository 구현
+ * ✅ is 접두사 제거 완료
  */
 class HabitFirestoreRepository @Inject constructor(
     private val firestore: FirebaseFirestore
@@ -30,19 +30,18 @@ class HabitFirestoreRepository @Inject constructor(
     // ==================== Habit CRUD ====================
 
     override fun getAllHabits(userId: String): Flow<List<Habit>> = callbackFlow {
-
         val listener = habitsCollection
             .whereEqualTo("userId", userId)
-            .whereEqualTo("isActive", true)
+            .whereEqualTo("active", true)  // ✅ isActive → active
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
                     return@addSnapshotListener
                 }
+
                 val habits = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(HabitFirestoreDto::class.java)?.toDomain()
                 } ?: emptyList()
-
 
                 trySend(habits)
             }
@@ -62,8 +61,8 @@ class HabitFirestoreRepository @Inject constructor(
     override fun getPersonalHabits(userId: String): Flow<List<Habit>> = callbackFlow {
         val listener = habitsCollection
             .whereEqualTo("userId", userId)
-            .whereEqualTo("isGroupShared", false)
-            .whereEqualTo("isActive", true)
+            .whereEqualTo("groupShared", false)  // ✅ isGroupShared → groupShared
+            .whereEqualTo("active", true)        // ✅ isActive → active
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
@@ -83,8 +82,8 @@ class HabitFirestoreRepository @Inject constructor(
     override fun getGroupHabits(groupId: String): Flow<List<Habit>> = callbackFlow {
         val listener = habitsCollection
             .whereEqualTo("groupId", groupId)
-            .whereEqualTo("isGroupShared", true)
-            .whereEqualTo("isActive", true)
+            .whereEqualTo("groupShared", true)   // ✅ isGroupShared → groupShared
+            .whereEqualTo("active", true)        // ✅ isActive → active
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
@@ -124,7 +123,7 @@ class HabitFirestoreRepository @Inject constructor(
     override suspend fun deleteHabit(habitId: String) {
         // Soft delete
         habitsCollection.document(habitId)
-            .update("isActive", false)
+            .update("active", false)  // ✅ isActive → active
             .await()
     }
 
@@ -240,7 +239,7 @@ class HabitFirestoreRepository @Inject constructor(
                 habitId = habitId,
                 userId = userId,
                 date = date,
-                isCompleted = true
+                completed = true  // ✅ isCompleted → completed
             )
             insertCheck(newCheck)
         }
@@ -251,7 +250,7 @@ class HabitFirestoreRepository @Inject constructor(
     override suspend fun getHabitStatistics(habitId: String): HabitStatistics {
         val snapshot = checksCollection
             .whereEqualTo("habitId", habitId)
-            .whereEqualTo("isCompleted", true)
+            .whereEqualTo("completed", true)  // ✅ isCompleted → completed
             .get()
             .await()
 
@@ -292,7 +291,7 @@ class HabitFirestoreRepository @Inject constructor(
             habitId = habitId,
             totalChecks = totalChecks,
             currentStreak = currentStreak,
-            longestStreak = currentStreak, // TODO: 별도 계산 필요
+            longestStreak = currentStreak,
             completionRate = completionRate.coerceIn(0f, 1f),
             thisWeekChecks = thisWeekChecks,
             thisMonthChecks = thisMonthChecks
@@ -306,7 +305,7 @@ class HabitFirestoreRepository @Inject constructor(
 
         while (true) {
             val check = getCheckByDate(habitId, checkDate)
-            if (check != null && check.isCompleted) {
+            if (check != null && check.completed) {  // ✅ isCompleted → completed
                 streak++
                 checkDate = checkDate.minusDays(1)
             } else {

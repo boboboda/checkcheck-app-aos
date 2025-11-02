@@ -10,9 +10,9 @@ data class Habit(
     val icon: String = "📌",
     val color: String = "#6650a4",
     val reminderTime: LocalTime? = null,
-    val isGroupShared: Boolean = false,
+    val groupShared: Boolean = false,  // ✅ isGroupShared → groupShared
     val groupId: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-    val isActive: Boolean = true
+    val active: Boolean = true  // ✅ isActive → active
 )

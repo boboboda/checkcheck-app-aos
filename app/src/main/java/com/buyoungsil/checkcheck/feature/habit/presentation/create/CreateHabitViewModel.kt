@@ -19,7 +19,7 @@ import javax.inject.Inject
 class CreateHabitViewModel @Inject constructor(
     private val createHabitUseCase: CreateHabitUseCase,
     private val getMyGroupsUseCase: GetMyGroupsUseCase,
-    private val authManager: FirebaseAuthManager,  // ✨ 추가
+    private val authManager: FirebaseAuthManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -29,7 +29,6 @@ class CreateHabitViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CreateHabitUiState())
     val uiState: StateFlow<CreateHabitUiState> = _uiState.asStateFlow()
 
-    // ✅ Firebase UID 사용
     private val currentUserId: String
         get() = authManager.currentUserId ?: "anonymous"
 
@@ -45,7 +44,7 @@ class CreateHabitViewModel @Inject constructor(
                         val preselectedGroup = groups.find { it.id == preselectedGroupId }
                         it.copy(
                             availableGroups = groups,
-                            isGroupShared = preselectedGroup != null,
+                            groupShared = preselectedGroup != null,  // ✅ isGroupShared → groupShared
                             selectedGroup = preselectedGroup
                         )
                     }
@@ -72,11 +71,11 @@ class CreateHabitViewModel @Inject constructor(
         _uiState.update { it.copy(color = color) }
     }
 
-    fun onGroupSharedToggle(isShared: Boolean) {
+    fun onGroupSharedToggle(shared: Boolean) {  // ✅ isShared → shared
         _uiState.update {
             it.copy(
-                isGroupShared = isShared,
-                selectedGroup = if (!isShared) null else it.selectedGroup
+                groupShared = shared,  // ✅ isGroupShared → groupShared
+                selectedGroup = if (!shared) null else it.selectedGroup
             )
         }
     }
@@ -93,22 +92,22 @@ class CreateHabitViewModel @Inject constructor(
             return
         }
 
-        if (currentState.isGroupShared && currentState.selectedGroup == null) {
+        if (currentState.groupShared && currentState.selectedGroup == null) {  // ✅
             _uiState.update { it.copy(error = "그룹을 선택해주세요") }
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _uiState.update { it.copy(loading = true, error = null) }  // ✅ isLoading → loading
 
             val habit = Habit(
                 id = "",
-                userId = currentUserId,  // ✅ Firebase UID
+                userId = currentUserId,
                 title = currentState.title,
                 description = currentState.description.takeIf { it.isNotBlank() },
                 icon = currentState.icon,
                 color = currentState.color,
-                isGroupShared = currentState.isGroupShared,
+                groupShared = currentState.groupShared,  // ✅ isGroupShared → groupShared
                 groupId = currentState.selectedGroup?.id
             )
 
@@ -116,16 +115,16 @@ class CreateHabitViewModel @Inject constructor(
                 .onSuccess {
                     _uiState.update {
                         it.copy(
-                            isLoading = false,
-                            isSuccess = true
+                            loading = false,  // ✅ isLoading → loading
+                            success = true    // ✅ isSuccess → success
                         )
                     }
                 }
                 .onFailure { error ->
                     _uiState.update {
                         it.copy(
-                            isLoading = false,
-                            error = error.message ?: "습관 생성에 실패했습니다"
+                            loading = false,  // ✅ isLoading → loading
+                            error = error.message ?: "습관 생성 실패"
                         )
                     }
                 }

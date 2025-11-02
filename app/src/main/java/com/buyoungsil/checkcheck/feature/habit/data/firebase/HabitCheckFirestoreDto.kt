@@ -6,13 +6,17 @@ import com.google.firebase.firestore.ServerTimestamp
 import java.time.LocalDate
 import java.util.Date
 
+/**
+ * Firestore용 HabitCheck DTO
+ * ✅ is 접두사 제거 - Firestore 자동 변환과 일치
+ */
 data class HabitCheckFirestoreDto(
     @DocumentId
     val id: String = "",
     val habitId: String = "",
     val userId: String = "",
-    val date: String = "",  // ← Firestore는 String 저장
-    val isCompleted: Boolean = false,
+    val date: String = "",  // LocalDate를 String으로 저장
+    val completed: Boolean = false,  // ✅ isCompleted → completed
     @ServerTimestamp
     val checkedAt: Date? = null
 ) {
@@ -23,8 +27,8 @@ data class HabitCheckFirestoreDto(
             id = id,
             habitId = habitId,
             userId = userId,
-            date = LocalDate.parse(date),  // ← String을 LocalDate로 변환
-            isCompleted = isCompleted,
+            date = LocalDate.parse(date),
+            completed = completed,
             checkedAt = checkedAt?.time ?: System.currentTimeMillis()
         )
     }
@@ -35,8 +39,8 @@ data class HabitCheckFirestoreDto(
                 id = check.id,
                 habitId = check.habitId,
                 userId = check.userId,
-                date = check.date.toString(),  // ← LocalDate를 String으로 변환
-                isCompleted = check.isCompleted,
+                date = check.date.toString(),
+                completed = check.completed,
                 checkedAt = Date(check.checkedAt)
             )
         }

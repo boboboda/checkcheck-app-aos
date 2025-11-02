@@ -1,11 +1,11 @@
 package com.buyoungsil.checkcheck.feature.habit.data.local
 
-
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
 /**
  * 습관 체크 DAO
+ * ✅ isCompleted → completed 수정 완료
  */
 @Dao
 interface HabitCheckDao {
@@ -40,14 +40,16 @@ interface HabitCheckDao {
     @Query("DELETE FROM habit_checks WHERE habitId = :habitId")
     suspend fun deleteChecksByHabit(habitId: String)
 
-    @Query("SELECT COUNT(*) FROM habit_checks WHERE habitId = :habitId AND isCompleted = 1")
+    // ✅ isCompleted → completed
+    @Query("SELECT COUNT(*) FROM habit_checks WHERE habitId = :habitId AND completed = 1")
     suspend fun getCompletedCount(habitId: String): Int
 
+    // ✅ isCompleted → completed
     @Query("""
         SELECT COUNT(*) 
         FROM habit_checks 
         WHERE habitId = :habitId 
-        AND isCompleted = 1 
+        AND completed = 1 
         AND date >= :startDate 
         AND date <= :endDate
     """)
