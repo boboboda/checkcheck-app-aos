@@ -2,9 +2,11 @@ package com.buyoungsil.checkcheck.feature.statistics
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetHabitStatisticsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetPersonalHabitsUseCase
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
+import com.buyoungsil.checkcheck.feature.statistics.presentation.StatisticsUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,13 +18,16 @@ import javax.inject.Inject
 @HiltViewModel
 class StatisticsViewModel @Inject constructor(
     private val getPersonalHabitsUseCase: GetPersonalHabitsUseCase,
-    private val getHabitStatisticsUseCase: GetHabitStatisticsUseCase
+    private val getHabitStatisticsUseCase: GetHabitStatisticsUseCase,
+    private val authManager: FirebaseAuthManager  // ✨ 추가
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StatisticsUiState())
     val uiState: StateFlow<StatisticsUiState> = _uiState.asStateFlow()
 
-    private val currentUserId = "test_user_id"
+    // ✅ Firebase UID 사용
+    private val currentUserId: String
+        get() = authManager.currentUserId ?: "anonymous"
 
     init {
         loadStatistics()

@@ -2,6 +2,7 @@ package com.buyoungsil.checkcheck.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetMyGroupsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetHabitStatisticsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetPersonalHabitsUseCase
@@ -18,13 +19,16 @@ class HomeViewModel @Inject constructor(
     private val getPersonalHabitsUseCase: GetPersonalHabitsUseCase,
     private val getMyGroupsUseCase: GetMyGroupsUseCase,
     private val toggleHabitCheckUseCase: ToggleHabitCheckUseCase,
-    private val getHabitStatisticsUseCase: GetHabitStatisticsUseCase
+    private val getHabitStatisticsUseCase: GetHabitStatisticsUseCase,
+    private val authManager: FirebaseAuthManager  // ✨ 추가
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private val currentUserId = "test_user_id"
+    // ✅ Firebase UID 사용
+    private val currentUserId: String
+        get() = authManager.currentUserId ?: "anonymous"
 
     init {
         loadData()

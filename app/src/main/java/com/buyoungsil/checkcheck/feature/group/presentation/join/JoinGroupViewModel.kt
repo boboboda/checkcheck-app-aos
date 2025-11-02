@@ -2,6 +2,7 @@ package com.buyoungsil.checkcheck.feature.group.presentation.join
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.JoinGroupUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +14,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class JoinGroupViewModel @Inject constructor(
-    private val joinGroupUseCase: JoinGroupUseCase
+    private val joinGroupUseCase: JoinGroupUseCase,
+    private val authManager: FirebaseAuthManager
 ) : ViewModel() {
 
     private val _inviteCode = MutableStateFlow("")
@@ -28,7 +30,8 @@ class JoinGroupViewModel @Inject constructor(
     private val _isSuccess = MutableStateFlow(false)
     val isSuccess: StateFlow<Boolean> = _isSuccess.asStateFlow()
 
-    private val currentUserId = "test_user_id"
+    private val currentUserId: String
+        get() = authManager.currentUserId ?: "anonymous"
 
     fun onInviteCodeChange(code: String) {
         _inviteCode.value = code.uppercase()

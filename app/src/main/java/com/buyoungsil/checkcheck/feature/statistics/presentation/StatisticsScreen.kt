@@ -1,4 +1,4 @@
-package com.buyoungsil.checkcheck.feature.statistics
+package com.buyoungsil.checkcheck.feature.statistics.presentation
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
+import com.buyoungsil.checkcheck.feature.statistics.StatisticsViewModel
+import com.buyoungsil.checkcheck.feature.statistics.presentation.StatisticsUiState
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -282,7 +285,7 @@ fun PeriodStatItem(
 
 @Composable
 fun HabitStatCard(
-    habitWithStats: com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
+    habitWithStats: HabitWithStats
 ) {
     val habit = habitWithStats.habit
     val stats = habitWithStats.statistics

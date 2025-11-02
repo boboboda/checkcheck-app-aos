@@ -2,6 +2,7 @@ package com.buyoungsil.checkcheck.feature.group.presentation.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetMyGroupsUseCase
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.LeaveGroupUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,13 +16,15 @@ import javax.inject.Inject
 @HiltViewModel
 class GroupListViewModel @Inject constructor(
     private val getMyGroupsUseCase: GetMyGroupsUseCase,
-    private val leaveGroupUseCase: LeaveGroupUseCase
+    private val leaveGroupUseCase: LeaveGroupUseCase,
+    private val authManager: FirebaseAuthManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GroupListUiState())
     val uiState: StateFlow<GroupListUiState> = _uiState.asStateFlow()
 
-    private val currentUserId = "test_user_id"
+    private val currentUserId: String
+        get() = authManager.currentUserId ?: "anonymous"
 
     init {
         loadGroups()

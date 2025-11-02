@@ -3,6 +3,7 @@ package com.buyoungsil.checkcheck.feature.group.presentation.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetGroupByIdUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetGroupHabitsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetHabitStatisticsUseCase
@@ -26,7 +27,8 @@ class GroupDetailViewModel @Inject constructor(
     private val toggleHabitCheckUseCase: ToggleHabitCheckUseCase,
     private val completeTaskUseCase: CompleteTaskUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    private val authManager: FirebaseAuthManager
 ) : ViewModel() {
 
     private val groupId: String = savedStateHandle.get<String>("groupId") ?: ""
@@ -34,7 +36,8 @@ class GroupDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(GroupDetailUiState())
     val uiState: StateFlow<GroupDetailUiState> = _uiState.asStateFlow()
 
-    private val currentUserId = "test_user_id"
+    private val currentUserId: String
+        get() = authManager.currentUserId ?: "anonymous"
 
     init {
         loadGroupDetail()

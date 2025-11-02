@@ -1,6 +1,5 @@
-package com.buyoungsil.checkcheck.feature.statistics
+package com.buyoungsil.checkcheck.feature.statistics.presentation
 
-import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitStatistics
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
 
 data class StatisticsUiState(

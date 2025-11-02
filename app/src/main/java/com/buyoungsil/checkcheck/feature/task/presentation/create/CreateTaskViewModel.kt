@@ -3,6 +3,7 @@ package com.buyoungsil.checkcheck.feature.task.presentation.create
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.task.domain.model.Task
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskPriority
 import com.buyoungsil.checkcheck.feature.task.domain.usecase.CreateTaskUseCase
@@ -17,6 +18,7 @@ import javax.inject.Inject
 @HiltViewModel
 class CreateTaskViewModel @Inject constructor(
     private val createTaskUseCase: CreateTaskUseCase,
+    private val authManager: FirebaseAuthManager,  // ✨ 추가
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -25,7 +27,9 @@ class CreateTaskViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CreateTaskUiState())
     val uiState: StateFlow<CreateTaskUiState> = _uiState.asStateFlow()
 
-    private val currentUserId = "test_user_id"
+    // ✅ Firebase UID 사용
+    private val currentUserId: String
+        get() = authManager.currentUserId ?: "anonymous"
 
     fun onTitleChange(title: String) {
         _uiState.update { it.copy(title = title) }
@@ -56,7 +60,7 @@ class CreateTaskViewModel @Inject constructor(
                 title = currentState.title,
                 description = currentState.description.takeIf { it.isNotBlank() },
                 priority = currentState.priority,
-                createdBy = currentUserId
+                createdBy = currentUserId  // ✅ Firebase UID
             )
 
             createTaskUseCase(task)

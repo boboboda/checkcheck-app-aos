@@ -14,7 +14,7 @@ import com.buyoungsil.checkcheck.feature.group.presentation.list.GroupListScreen
 import com.buyoungsil.checkcheck.feature.habit.presentation.create.CreateHabitScreen
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitListScreen
 import com.buyoungsil.checkcheck.feature.home.HomeScreen
-import com.buyoungsil.checkcheck.feature.statistics.StatisticsScreen
+import com.buyoungsil.checkcheck.feature.statistics.presentation.StatisticsScreen
 import com.buyoungsil.checkcheck.feature.task.presentation.create.CreateTaskScreen
 import com.buyoungsil.checkcheck.feature.task.presentation.list.TaskListScreen
 

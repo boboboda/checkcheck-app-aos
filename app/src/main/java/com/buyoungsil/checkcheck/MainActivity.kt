@@ -1,11 +1,15 @@
 package com.buyoungsil.checkcheck
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
@@ -15,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -35,10 +40,19 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 자동 로그인 (익명)
+        // 🔥 Firebase 익명 로그인
         lifecycleScope.launch {
             if (authManager.currentUser == null) {
-                authManager.signInAnonymously()
+                Log.d(TAG, "⏳ Firebase 익명 로그인 시도...")
+                val result = authManager.signInAnonymously()
+                result.onSuccess { user ->
+                    Log.d(TAG, "✅ Firebase 익명 로그인 성공")
+                    Log.d(TAG, "   User ID: ${user.uid}")
+                }.onFailure { error ->
+                    Log.e(TAG, "❌ Firebase 로그인 실패: ${error.message}")
+                }
+            } else {
+                Log.d(TAG, "✅ 이미 로그인됨: ${authManager.currentUser?.uid}")
             }
         }
 
@@ -59,7 +73,13 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("로그인 중...")
+                        }
                     }
                 } else {
                     Scaffold(
@@ -112,5 +132,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "MainActivity"
     }
 }

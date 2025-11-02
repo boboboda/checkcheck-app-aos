@@ -2,6 +2,7 @@ package com.buyoungsil.checkcheck.feature.group.presentation.create
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.group.domain.model.Group
 import com.buyoungsil.checkcheck.feature.group.domain.model.GroupType
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.CreateGroupUseCase
@@ -15,13 +16,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CreateGroupViewModel @Inject constructor(
-    private val createGroupUseCase: CreateGroupUseCase
+    private val createGroupUseCase: CreateGroupUseCase,
+    private val authManager: FirebaseAuthManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CreateGroupUiState())
     val uiState: StateFlow<CreateGroupUiState> = _uiState.asStateFlow()
 
-    private val currentUserId = "test_user_id"
+    private val currentUserId: String
+        get() = authManager.currentUserId ?: "anonymous"
 
     fun onNameChange(name: String) {
         _uiState.update { it.copy(name = name) }

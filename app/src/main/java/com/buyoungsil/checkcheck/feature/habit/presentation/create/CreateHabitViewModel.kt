@@ -3,6 +3,7 @@ package com.buyoungsil.checkcheck.feature.habit.presentation.create
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetMyGroupsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.model.Habit
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.CreateHabitUseCase
@@ -17,20 +18,23 @@ import javax.inject.Inject
 @HiltViewModel
 class CreateHabitViewModel @Inject constructor(
     private val createHabitUseCase: CreateHabitUseCase,
-    private val getMyGroupsUseCase: GetMyGroupsUseCase,  // ← 추가
-    savedStateHandle: SavedStateHandle  // ← 추가
+    private val getMyGroupsUseCase: GetMyGroupsUseCase,
+    private val authManager: FirebaseAuthManager,  // ✨ 추가
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val preselectedGroupId: String? =
-        savedStateHandle.get<String>("groupId")  // ← 추가
+        savedStateHandle.get<String>("groupId")
 
     private val _uiState = MutableStateFlow(CreateHabitUiState())
     val uiState: StateFlow<CreateHabitUiState> = _uiState.asStateFlow()
 
-    private val currentUserId = "test_user_id"
+    // ✅ Firebase UID 사용
+    private val currentUserId: String
+        get() = authManager.currentUserId ?: "anonymous"
 
     init {
-        loadGroups()  // ← 추가
+        loadGroups()
     }
 
     private fun loadGroups() {
@@ -41,8 +45,8 @@ class CreateHabitViewModel @Inject constructor(
                         val preselectedGroup = groups.find { it.id == preselectedGroupId }
                         it.copy(
                             availableGroups = groups,
-                            isGroupShared = preselectedGroup != null,  // ← 추가
-                            selectedGroup = preselectedGroup           // ← 추가
+                            isGroupShared = preselectedGroup != null,
+                            selectedGroup = preselectedGroup
                         )
                     }
                 }
@@ -68,7 +72,6 @@ class CreateHabitViewModel @Inject constructor(
         _uiState.update { it.copy(color = color) }
     }
 
-    // ← 추가
     fun onGroupSharedToggle(isShared: Boolean) {
         _uiState.update {
             it.copy(
@@ -78,7 +81,6 @@ class CreateHabitViewModel @Inject constructor(
         }
     }
 
-    // ← 추가
     fun onGroupSelect(group: com.buyoungsil.checkcheck.feature.group.domain.model.Group) {
         _uiState.update { it.copy(selectedGroup = group) }
     }
@@ -101,13 +103,13 @@ class CreateHabitViewModel @Inject constructor(
 
             val habit = Habit(
                 id = "",
-                userId = currentUserId,
+                userId = currentUserId,  // ✅ Firebase UID
                 title = currentState.title,
                 description = currentState.description.takeIf { it.isNotBlank() },
                 icon = currentState.icon,
                 color = currentState.color,
-                isGroupShared = currentState.isGroupShared,  // ← 추가
-                groupId = currentState.selectedGroup?.id     // ← 추가
+                isGroupShared = currentState.isGroupShared,
+                groupId = currentState.selectedGroup?.id
             )
 
             createHabitUseCase(habit)

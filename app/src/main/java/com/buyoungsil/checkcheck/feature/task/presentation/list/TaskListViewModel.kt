@@ -3,6 +3,7 @@ package com.buyoungsil.checkcheck.feature.task.presentation.list
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.task.domain.usecase.CompleteTaskUseCase
 import com.buyoungsil.checkcheck.feature.task.domain.usecase.DeleteTaskUseCase
 import com.buyoungsil.checkcheck.feature.task.domain.usecase.GetGroupTasksUseCase
@@ -19,7 +20,8 @@ class TaskListViewModel @Inject constructor(
     private val getGroupTasksUseCase: GetGroupTasksUseCase,
     private val completeTaskUseCase: CompleteTaskUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    private val authManager: FirebaseAuthManager
 ) : ViewModel() {
 
     private val groupId: String = savedStateHandle.get<String>("groupId") ?: ""
@@ -27,7 +29,8 @@ class TaskListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TaskListUiState())
     val uiState: StateFlow<TaskListUiState> = _uiState.asStateFlow()
 
-    private val currentUserId = "test_user_id"
+    private val currentUserId: String
+        get() = authManager.currentUserId ?: "anonymous"
 
     init {
         loadTasks()
