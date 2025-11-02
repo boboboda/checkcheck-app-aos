@@ -1,0 +1,17 @@
+package com.buyoungsil.checkcheck.feature.statistics
+
+import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitStatistics
+import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
+
+data class StatisticsUiState(
+    val habits: List<HabitWithStats> = emptyList(),
+    val totalHabits: Int = 0,
+    val totalChecks: Int = 0,
+    val averageCompletionRate: Float = 0f,
+    val longestStreak: Int = 0,
+    val currentStreak: Int = 0,
+    val thisWeekChecks: Int = 0,
+    val thisMonthChecks: Int = 0,
+    val isLoading: Boolean = false,
+    val error: String? = null
+)

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "379908067709",
+    "project_id": "checkcheck-app-25782",
+    "storage_bucket": "checkcheck-app-25782.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:379908067709:android:ea2f45031e6ef50facbc14",
+        "android_client_info": {
+          "package_name": "com.buyoungsil.checkcheck"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAMwivwhPsoN2-8KaGGl3ebpxAxXdpfSjs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

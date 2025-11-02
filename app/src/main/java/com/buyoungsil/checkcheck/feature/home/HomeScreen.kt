@@ -1,0 +1,190 @@
+package com.buyoungsil.checkcheck.feature.home
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.buyoungsil.checkcheck.core.ui.components.HabitCard
+import com.buyoungsil.checkcheck.feature.group.presentation.list.GroupCard
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    viewModel: HomeViewModel = hiltViewModel(),
+    onNavigateToHabitCreate: () -> Unit,
+    onNavigateToGroupList: () -> Unit,
+    onNavigateToGroupDetail: (String) -> Unit
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("체크체크")
+                        if (uiState.todayTotalCount > 0) {
+                            Text(
+                                text = "오늘 ${uiState.todayCompletedCount}/${uiState.todayTotalCount} 완료 🎉",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onNavigateToHabitCreate) {
+                Icon(Icons.Default.Add, "습관 추가")
+            }
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            when {
+                uiState.isLoading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
+                uiState.error != null -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = uiState.error ?: "오류",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { viewModel.onRetry() }) {
+                            Text("다시 시도")
+                        }
+                    }
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // 내 습관 섹션
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "📌 내 습관 (${uiState.habits.size})",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        if (uiState.habits.isEmpty()) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(32.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = "아직 습관이 없어요",
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Text(
+                                            text = "+ 버튼을 눌러 첫 습관을 만들어보세요!",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            items(uiState.habits) { habitWithStats ->
+                                HabitCard(
+                                    habitWithStats = habitWithStats,
+                                    onCheck = { viewModel.onHabitCheck(habitWithStats.habit.id) },
+                                    onDelete = { /* TODO */ }
+                                )
+                            }
+                        }
+
+                        // 내 그룹 섹션
+                        item {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "👥 내 그룹 (${uiState.groups.size})",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                TextButton(onClick = onNavigateToGroupList) {
+                                    Text("전체 보기")
+                                }
+                            }
+                        }
+
+                        if (uiState.groups.isEmpty()) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(32.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = "아직 그룹이 없어요",
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Button(onClick = onNavigateToGroupList) {
+                                            Text("그룹 만들기")
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            items(uiState.groups.take(3)) { group ->
+                                GroupCard(
+                                    group = group,
+                                    onClick = { onNavigateToGroupDetail(group.id) },
+                                    onLeave = { /* TODO */ }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
