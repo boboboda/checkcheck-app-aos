@@ -14,6 +14,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+/**
+ * 데이터베이스 모듈
+ * ✅ Migration 추가
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -28,7 +32,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "checkcheck_database"
         )
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration()  // Migration 실패 시 데이터 삭제 (개발 중에만)
             .build()
     }
 

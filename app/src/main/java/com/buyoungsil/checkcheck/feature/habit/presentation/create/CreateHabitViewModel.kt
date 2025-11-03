@@ -4,8 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
-import com.buyoungsil.checkcheck.core.notification.ReminderScheduler
-import com.buyoungsil.checkcheck.core.notification.domain.model.Reminder
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetMyGroupsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.model.Habit
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.CreateHabitUseCase
@@ -15,16 +13,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalTime
-import java.util.UUID
 import javax.inject.Inject
 
+/**
+ * 습관 생성 ViewModel
+ * ✅ 알림 관련 로직 제거
+ */
 @HiltViewModel
 class CreateHabitViewModel @Inject constructor(
     private val createHabitUseCase: CreateHabitUseCase,
     private val getMyGroupsUseCase: GetMyGroupsUseCase,
     private val authManager: FirebaseAuthManager,
-    private val reminderScheduler: ReminderScheduler,  // ✅ 추가
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -89,16 +88,6 @@ class CreateHabitViewModel @Inject constructor(
         _uiState.update { it.copy(selectedGroup = group) }
     }
 
-    // ✅ 알림 설정 변경
-    fun onReminderChange(time: LocalTime?, enabled: Boolean) {
-        _uiState.update {
-            it.copy(
-                reminderTime = time,
-                reminderEnabled = enabled
-            )
-        }
-    }
-
     fun onCreateHabit() {
         val currentState = _uiState.value
 
@@ -122,27 +111,12 @@ class CreateHabitViewModel @Inject constructor(
                 description = currentState.description.takeIf { it.isNotBlank() },
                 icon = currentState.icon,
                 color = currentState.color,
-                reminderTime = currentState.reminderTime,      // ✅
-                reminderEnabled = currentState.reminderEnabled, // ✅
                 groupShared = currentState.groupShared,
                 groupId = currentState.selectedGroup?.id
             )
 
             createHabitUseCase(habit)
-                .onSuccess { createdHabit ->
-                    // ✅ 알림 스케줄 설정
-                    if (createdHabit.reminderEnabled && createdHabit.reminderTime != null) {
-                        reminderScheduler.scheduleHabitReminder(
-                            Reminder(
-                                id = UUID.randomUUID().toString(),
-                                habitId = createdHabit.id,
-                                habitTitle = createdHabit.title,
-                                time = createdHabit.reminderTime,
-                                enabled = true
-                            )
-                        )
-                    }
-
+                .onSuccess {
                     _uiState.update {
                         it.copy(
                             loading = false,

@@ -6,8 +6,13 @@ import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.time.LocalDate
+import java.time.LocalTime
 import java.util.Date
 
+/**
+ * Task Firestore DTO
+ * ✅ 알림 필드 추가
+ */
 data class TaskFirestoreDto(
     @DocumentId
     val id: String = "",
@@ -18,7 +23,10 @@ data class TaskFirestoreDto(
     val assigneeName: String? = null,
     val status: String = TaskStatus.PENDING.name,
     val priority: String = TaskPriority.NORMAL.name,
-    val dueDate: String? = null,  // ← LocalDate를 String으로 저장
+    val dueDate: String? = null,              // LocalDate → String
+    val dueTime: String? = null,              // ✅ LocalTime → String
+    val reminderEnabled: Boolean = false,     // ✅
+    val reminderMinutesBefore: Int = 60,      // ✅
     val completedBy: String? = null,
     val completedAt: Long? = null,
     val createdBy: String = "",
@@ -30,7 +38,7 @@ data class TaskFirestoreDto(
     constructor() : this(
         "", "", "", null, null, null,
         TaskStatus.PENDING.name, TaskPriority.NORMAL.name,
-        null, null, null, "", null, null
+        null, null, false, 60, null, null, "", null, null
     )
 
     fun toDomain(): Task {
@@ -51,7 +59,10 @@ data class TaskFirestoreDto(
             } catch (e: Exception) {
                 TaskPriority.NORMAL
             },
-            dueDate = dueDate?.let { LocalDate.parse(it) },  // ← String을 LocalDate로 변환
+            dueDate = dueDate?.let { LocalDate.parse(it) },
+            dueTime = dueTime?.let { LocalTime.parse(it) },          // ✅
+            reminderEnabled = reminderEnabled,                        // ✅
+            reminderMinutesBefore = reminderMinutesBefore,            // ✅
             completedBy = completedBy,
             completedAt = completedAt,
             createdBy = createdBy,
@@ -71,7 +82,10 @@ data class TaskFirestoreDto(
                 assigneeName = task.assigneeName,
                 status = task.status.name,
                 priority = task.priority.name,
-                dueDate = task.dueDate?.toString(),  // ← LocalDate를 String으로 변환
+                dueDate = task.dueDate?.toString(),
+                dueTime = task.dueTime?.toString(),                   // ✅
+                reminderEnabled = task.reminderEnabled,               // ✅
+                reminderMinutesBefore = task.reminderMinutesBefore,   // ✅
                 completedBy = task.completedBy,
                 completedAt = task.completedAt,
                 createdBy = task.createdBy,

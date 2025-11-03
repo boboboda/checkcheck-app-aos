@@ -18,6 +18,7 @@ import javax.inject.Singleton
 
 /**
  * 알림 관리 헬퍼
+ * ✅ Task 알림 추가
  */
 @Singleton
 class NotificationHelper @Inject constructor(
@@ -25,11 +26,11 @@ class NotificationHelper @Inject constructor(
 ) {
 
     companion object {
-        const val CHANNEL_ID_HABIT_REMINDER = "habit_reminder"
+        const val CHANNEL_ID_TASK_REMINDER = "task_reminder"
         const val CHANNEL_ID_GROUP_ACTIVITY = "group_activity"
         const val CHANNEL_ID_ACHIEVEMENT = "achievement"
 
-        const val NOTIFICATION_ID_HABIT_BASE = 1000
+        const val NOTIFICATION_ID_TASK_BASE = 1000
         const val NOTIFICATION_ID_GROUP_BASE = 2000
         const val NOTIFICATION_ID_ACHIEVEMENT_BASE = 3000
     }
@@ -45,11 +46,11 @@ class NotificationHelper @Inject constructor(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channels = listOf(
                 NotificationChannel(
-                    CHANNEL_ID_HABIT_REMINDER,
-                    "습관 리마인더",
+                    CHANNEL_ID_TASK_REMINDER,
+                    "할일 알림",
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply {
-                    description = "습관 실천 알림"
+                    description = "할일 마감 알림"
                     enableVibration(true)
                 },
 
@@ -78,38 +79,44 @@ class NotificationHelper @Inject constructor(
     }
 
     /**
-     * 습관 리마인더 알림 표시
+     * 할일 마감 알림 표시
+     * ✅ 새로 추가
      */
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
-    fun showHabitReminder(
-        habitId: String,
-        habitTitle: String,
-        habitIcon: String = "📌",
-        message: String? = null
+    fun showTaskReminder(
+        taskId: String,
+        taskTitle: String,
+        groupName: String,
+        minutesLeft: Int
     ) {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("habitId", habitId)
+            putExtra("taskId", taskId)
         }
 
         val pendingIntent = PendingIntent.getActivity(
             context,
-            habitId.hashCode(),
+            taskId.hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID_HABIT_REMINDER)
-            .setSmallIcon(R.drawable.ic_notification) // TODO: 아이콘 추가 필요
-            .setContentTitle("$habitIcon $habitTitle")
-            .setContentText(message ?: "습관 실천 시간이에요! 💪")
+        val timeText = when {
+            minutesLeft >= 60 -> "${minutesLeft / 60}시간 후"
+            else -> "${minutesLeft}분 후"
+        }
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID_TASK_REMINDER)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("⏰ $groupName - 할일 마감 알림")
+            .setContentText("'$taskTitle' $timeText 마감이에요!")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .build()
 
-        val notificationId = NOTIFICATION_ID_HABIT_BASE + habitId.hashCode()
+        val notificationId = NOTIFICATION_ID_TASK_BASE + taskId.hashCode()
         NotificationManagerCompat.from(context).notify(notificationId, notification)
     }
 
@@ -179,20 +186,5 @@ class NotificationHelper @Inject constructor(
 
         val notificationId = NOTIFICATION_ID_ACHIEVEMENT_BASE + habitId.hashCode()
         NotificationManagerCompat.from(context).notify(notificationId, notification)
-    }
-
-    /**
-     * 알림 취소
-     */
-    fun cancelHabitReminder(habitId: String) {
-        val notificationId = NOTIFICATION_ID_HABIT_BASE + habitId.hashCode()
-        NotificationManagerCompat.from(context).cancel(notificationId)
-    }
-
-    /**
-     * 모든 알림 취소
-     */
-    fun cancelAllNotifications() {
-        NotificationManagerCompat.from(context).cancelAll()
     }
 }

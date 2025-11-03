@@ -14,7 +14,7 @@ import javax.inject.Inject
 class BootReceiver : BroadcastReceiver() {
 
     @Inject
-    lateinit var reminderScheduler: ReminderScheduler
+    lateinit var reminderScheduler: TaskReminderScheduler
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {

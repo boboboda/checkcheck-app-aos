@@ -3,11 +3,10 @@ package com.buyoungsil.checkcheck.feature.habit.data.local
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.buyoungsil.checkcheck.feature.habit.domain.model.Habit
-import java.time.LocalTime
 
 /**
- * Room용 Habit Entity
- * ✅ reminderTime, reminderEnabled 추가
+ * Habit Room Entity
+ * ✅ 알림 필드 제거
  */
 @Entity(tableName = "habits")
 data class HabitEntity(
@@ -18,12 +17,11 @@ data class HabitEntity(
     val description: String?,
     val icon: String,
     val color: String,
-    val reminderTime: String?,       // ✅ "HH:mm" 형식
-    val reminderEnabled: Boolean,    // ✅
     val groupShared: Boolean,
     val groupId: String?,
     val createdAt: Long,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val active: Boolean
 ) {
     fun toDomain(): Habit {
         return Habit(
@@ -33,12 +31,11 @@ data class HabitEntity(
             description = description,
             icon = icon,
             color = color,
-            reminderTime = reminderTime?.let { LocalTime.parse(it) },  // ✅
-            reminderEnabled = reminderEnabled,                          // ✅
             groupShared = groupShared,
             groupId = groupId,
             createdAt = createdAt,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            active = active
         )
     }
 
@@ -51,12 +48,11 @@ data class HabitEntity(
                 description = habit.description,
                 icon = habit.icon,
                 color = habit.color,
-                reminderTime = habit.reminderTime?.toString(),  // ✅
-                reminderEnabled = habit.reminderEnabled,        // ✅
                 groupShared = habit.groupShared,
                 groupId = habit.groupId,
                 createdAt = habit.createdAt,
-                updatedAt = habit.updatedAt
+                updatedAt = habit.updatedAt,
+                active = habit.active
             )
         }
     }

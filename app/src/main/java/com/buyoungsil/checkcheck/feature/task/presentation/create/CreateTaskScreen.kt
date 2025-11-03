@@ -1,17 +1,24 @@
 package com.buyoungsil.checkcheck.feature.task.presentation.create
 
-import androidx.compose.foundation.clickable
+import android.os.Build
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.buyoungsil.checkcheck.feature.task.domain.model.TaskPriority
+import com.buyoungsil.checkcheck.core.notification.rememberNotificationPermissionState
+import com.buyoungsil.checkcheck.core.ui.components.TaskReminderDialog
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
+/**
+ * 할일 생성 화면
+ * ✅ 알림 설정 UI 추가
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateTaskScreen(
@@ -19,9 +26,11 @@ fun CreateTaskScreen(
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val permissionState = rememberNotificationPermissionState()
+    var showReminderDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(uiState.isSuccess) {
-        if (uiState.isSuccess) {
+    LaunchedEffect(uiState.success) {
+        if (uiState.success) {
             onNavigateBack()
         }
     }
@@ -45,31 +54,12 @@ fun CreateTaskScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 우선순위 선택
-            Text(
-                text = "우선순위",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                TaskPriority.values().forEach { priority ->
-                    FilterChip(
-                        selected = priority == uiState.priority,
-                        onClick = { viewModel.onPriorityChange(priority) },
-                        label = { Text(priority.displayName) }
-                    )
-                }
-            }
-
             // 할일 제목
             OutlinedTextField(
                 value = uiState.title,
                 onValueChange = { viewModel.onTitleChange(it) },
-                label = { Text("할일 제목") },
-                placeholder = { Text("예: 장보기") },
+                label = { Text("할일") },
+                placeholder = { Text("예: 병원 예약하기") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 isError = uiState.error != null && uiState.title.isBlank()
@@ -86,6 +76,43 @@ fun CreateTaskScreen(
                 maxLines = 5
             )
 
+            // 우선순위 선택
+            Text(
+                text = "우선순위",
+                style = MaterialTheme.typography.titleMedium
+            )
+            // TODO: 우선순위 선택 UI
+
+            // 마감일 선택
+            Text(
+                text = "마감일",
+                style = MaterialTheme.typography.titleMedium
+            )
+            // TODO: 날짜/시간 선택 UI
+
+            // ✅ 알림 설정 버튼
+            OutlinedButton(
+                onClick = {
+                    showReminderDialog = true
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = uiState.dueDate != null // 마감일이 있어야 알림 설정 가능
+            ) {
+                Icon(Icons.Default.Notifications, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    if (uiState.reminderEnabled) {
+                        val minutes = uiState.reminderMinutesBefore
+                        val time = if (minutes >= 60) "${minutes / 60}시간 전" else "${minutes}분 전"
+                        "알림: $time"
+                    } else {
+                        "알림 설정"
+                    }
+                )
+            }
+
+            // TODO: 담당자 선택 UI
+
             if (uiState.error != null) {
                 Text(
                     text = uiState.error ?: "",
@@ -96,12 +123,13 @@ fun CreateTaskScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            // 생성 버튼
             Button(
                 onClick = { viewModel.onCreateTask() },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isLoading
+                enabled = !uiState.loading
             ) {
-                if (uiState.isLoading) {
+                if (uiState.loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary
@@ -110,6 +138,28 @@ fun CreateTaskScreen(
                     Text("할일 만들기")
                 }
             }
+        }
+
+        // ✅ 알림 설정 다이얼로그
+        if (showReminderDialog) {
+            TaskReminderDialog(
+                enabled = uiState.reminderEnabled,
+                minutesBefore = uiState.reminderMinutesBefore,
+                onDismiss = {
+                    showReminderDialog = false
+                },
+                onConfirm = { enabled, minutes ->
+                    // Android 13+ 권한 체크
+                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        if (!permissionState.hasPermission) {
+                            permissionState.requestPermission()
+                        }
+                    }
+
+                    viewModel.onReminderChange(enabled, minutes)
+                    showReminderDialog = false
+                }
+            )
         }
     }
 }

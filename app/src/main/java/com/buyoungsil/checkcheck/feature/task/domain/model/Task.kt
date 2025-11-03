@@ -1,7 +1,12 @@
 package com.buyoungsil.checkcheck.feature.task.domain.model
 
 import java.time.LocalDate
+import java.time.LocalTime
 
+/**
+ * 할일 도메인 모델
+ * ✅ 알림 필드 추가
+ */
 data class Task(
     val id: String,
     val groupId: String,
@@ -12,6 +17,9 @@ data class Task(
     val status: TaskStatus = TaskStatus.PENDING,
     val priority: TaskPriority = TaskPriority.NORMAL,
     val dueDate: LocalDate? = null,
+    val dueTime: LocalTime? = null,               // ✅ 마감 시간
+    val reminderEnabled: Boolean = false,         // ✅ 알림 활성화
+    val reminderMinutesBefore: Int = 60,          // ✅ 몇 분 전 알림 (기본 1시간)
     val completedBy: String? = null,
     val completedAt: Long? = null,
     val createdBy: String,
