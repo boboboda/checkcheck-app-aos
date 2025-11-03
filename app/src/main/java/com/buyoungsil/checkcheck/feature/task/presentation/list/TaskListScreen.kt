@@ -91,12 +91,67 @@ fun TaskListScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(uiState.tasks) { task ->
-                            TaskCard(
-                                task = task,
-                                onComplete = { viewModel.onCompleteTask(task.id) },
-                                onDelete = { viewModel.onDeleteTask(task.id) }
-                            )
+                        // ✅ 상태별 그룹핑 추가
+                        val pendingTasks = uiState.tasks.filter { it.status == TaskStatus.PENDING }
+                        val inProgressTasks = uiState.tasks.filter { it.status == TaskStatus.IN_PROGRESS }
+                        val completedTasks = uiState.tasks.filter { it.status == TaskStatus.COMPLETED }
+
+                        // 진행 중
+                        if (inProgressTasks.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "🔄 진행 중",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            items(inProgressTasks) { task ->
+                                TaskCard(
+                                    task = task,
+                                    onComplete = { viewModel.onCompleteTask(task.id) },
+                                    onDelete = { viewModel.onDeleteTask(task.id) }
+                                )
+                            }
+                            item { Spacer(modifier = Modifier.height(8.dp)) }
+                        }
+
+                        // 대기 중
+                        if (pendingTasks.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "📋 대기 중",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            items(pendingTasks) { task ->
+                                TaskCard(
+                                    task = task,
+                                    onComplete = { viewModel.onCompleteTask(task.id) },
+                                    onDelete = { viewModel.onDeleteTask(task.id) }
+                                )
+                            }
+                            item { Spacer(modifier = Modifier.height(8.dp)) }
+                        }
+
+                        // 완료
+                        if (completedTasks.isNotEmpty()) {
+                            item {
+                                Text(
+                                    text = "✅ 완료",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                            }
+                            items(completedTasks) { task ->
+                                TaskCard(
+                                    task = task,
+                                    onComplete = { viewModel.onCompleteTask(task.id) },
+                                    onDelete = { viewModel.onDeleteTask(task.id) }
+                                )
+                            }
                         }
                     }
                 }

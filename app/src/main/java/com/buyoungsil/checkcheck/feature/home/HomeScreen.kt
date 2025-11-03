@@ -1,19 +1,19 @@
 package com.buyoungsil.checkcheck.feature.home
 
+import android.os.Build
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.buyoungsil.checkcheck.core.notification.rememberNotificationPermissionState  // ✅ 추가
 import com.buyoungsil.checkcheck.core.ui.components.HabitCard
 import com.buyoungsil.checkcheck.feature.group.presentation.list.GroupCard
 
@@ -26,6 +26,16 @@ fun HomeScreen(
     onNavigateToGroupDetail: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val permissionState = rememberNotificationPermissionState()  // ✅ 추가
+
+    // ✅ 앱 시작 시 알림 권한 자동 요청 (Android 13+만)
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!permissionState.hasPermission) {
+                permissionState.requestPermission()
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -167,18 +177,20 @@ fun HomeScreen(
                                             style = MaterialTheme.typography.bodyLarge
                                         )
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        Button(onClick = onNavigateToGroupList) {
-                                            Text("그룹 만들기")
-                                        }
+                                        Text(
+                                            text = "그룹을 만들거나 초대받아보세요!",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
                             }
                         } else {
-                            items(uiState.groups.take(3)) { group ->
+                            items(uiState.groups) { group ->
                                 GroupCard(
                                     group = group,
                                     onClick = { onNavigateToGroupDetail(group.id) },
-                                    onLeave = { /* TODO */ }
+                                    onLeave = { }
                                 )
                             }
                         }

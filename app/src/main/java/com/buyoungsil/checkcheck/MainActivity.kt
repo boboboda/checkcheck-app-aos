@@ -27,6 +27,7 @@ import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.core.ui.navigation.NavGraph
 import com.buyoungsil.checkcheck.core.ui.navigation.Screen
 import com.buyoungsil.checkcheck.ui.theme.CheckcheckTheme
+import com.google.firebase.messaging.FirebaseMessaging  // ✅ FCM 추가
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -55,6 +56,9 @@ class MainActivity : ComponentActivity() {
                 Log.d(TAG, "✅ 이미 로그인됨: ${authManager.currentUser?.uid}")
             }
         }
+
+        // ✅ FCM 토큰 확인
+        checkFcmToken()
 
         enableEdgeToEdge()
         setContent {
@@ -132,6 +136,46 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * ✅ FCM 토큰 확인 함수
+     *
+     * FCM이 제대로 작동하는지 확인하는 핵심 코드!
+     * 로그를 통해 토큰 생성 성공/실패를 확인할 수 있어요.
+     */
+    private fun checkFcmToken() {
+        Log.d(TAG, "=== FCM 토큰 확인 시작 ===")
+
+        FirebaseMessaging.getInstance().token
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val token = task.result
+                    Log.d(TAG, "✅ FCM 토큰 생성 성공!")
+                    Log.d(TAG, "🔑 토큰: $token")
+                    Log.d(TAG, "📌 Firebase Console에서 이 토큰으로 테스트 알림을 보낼 수 있어요!")
+                } else {
+                    Log.e(TAG, "❌ FCM 토큰 생성 실패", task.exception)
+                    Log.e(TAG, "   에러 메시지: ${task.exception?.message}")
+
+                    // 에러 원인 분석
+                    when {
+                        task.exception?.message?.contains("SERVICE_NOT_AVAILABLE") == true -> {
+                            Log.e(TAG, "   → Google Play Services를 사용할 수 없습니다")
+                        }
+                        task.exception?.message?.contains("DEVELOPER_ERROR") == true -> {
+                            Log.e(TAG, "   → Firebase 프로젝트 설정 문제입니다")
+                            Log.e(TAG, "   → google-services.json 파일을 확인하세요")
+                        }
+                        task.exception?.message?.contains("MISSING_INSTANCEID_SERVICE") == true -> {
+                            Log.e(TAG, "   → AndroidManifest.xml 설정을 확인하세요")
+                        }
+                        else -> {
+                            Log.e(TAG, "   → 알 수 없는 에러입니다")
+                        }
+                    }
+                }
+            }
     }
 
     companion object {

@@ -34,8 +34,9 @@ enum class TaskStatus(val displayName: String, val icon: String) {
     EXPIRED("만료", "❌")
 }
 
-enum class TaskPriority(val displayName: String, val color: String) {
-    URGENT("긴급", "#FF0000"),
-    NORMAL("보통", "#6650a4"),
-    LOW("나중", "#999999")
+// ✅ icon 속성만 추가 (displayName, color는 그대로)
+enum class TaskPriority(val displayName: String, val color: String, val icon: String) {
+    URGENT("긴급", "#FF0000", "🚨"),
+    NORMAL("보통", "#6650a4", "📌"),
+    LOW("나중", "#999999", "💡")
 }
