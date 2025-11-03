@@ -78,4 +78,12 @@ dependencies {
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.messaging.ktx)
+
+
+    // ✅ WorkManager (알림 스케줄링)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // ✅ Hilt WorkManager
+    implementation("androidx.hilt:hilt-work:1.1.0")
+    kapt("androidx.hilt:hilt-compiler:1.1.0")
 }

@@ -3,11 +3,12 @@ package com.buyoungsil.checkcheck.feature.habit.data.firebase
 import com.buyoungsil.checkcheck.feature.habit.domain.model.Habit
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
+import java.time.LocalTime
 import java.util.Date
 
 /**
  * Firestore용 Habit DTO
- * ✅ is 접두사 제거 - Firestore 자동 변환과 일치
+ * ✅ reminderTime, reminderEnabled 추가
  */
 data class HabitFirestoreDto(
     @DocumentId
@@ -17,11 +18,13 @@ data class HabitFirestoreDto(
     val description: String? = null,
     val icon: String = "📌",
     val color: String = "#6650a4",
-    val groupShared: Boolean = false,  // ✅ isGroupShared → groupShared
+    val reminderTime: String? = null,      // ✅ "HH:mm" 형식
+    val reminderEnabled: Boolean = false,  // ✅
+    val groupShared: Boolean = false,
     val groupId: String? = null,
     @ServerTimestamp
     val createdAt: Date? = null,
-    val active: Boolean = true  // ✅ isActive → active
+    val active: Boolean = true
 ) {
     // Firestore는 기본 생성자 필요
     constructor() : this(
@@ -31,6 +34,8 @@ data class HabitFirestoreDto(
         description = null,
         icon = "📌",
         color = "#6650a4",
+        reminderTime = null,
+        reminderEnabled = false,
         groupShared = false,
         groupId = null,
         createdAt = null,
@@ -45,6 +50,8 @@ data class HabitFirestoreDto(
             description = description,
             icon = icon,
             color = color,
+            reminderTime = reminderTime?.let { LocalTime.parse(it) },  // ✅
+            reminderEnabled = reminderEnabled,                          // ✅
             groupShared = groupShared,
             groupId = groupId,
             createdAt = createdAt?.time ?: System.currentTimeMillis(),
@@ -61,6 +68,8 @@ data class HabitFirestoreDto(
                 description = habit.description,
                 icon = habit.icon,
                 color = habit.color,
+                reminderTime = habit.reminderTime?.toString(),  // ✅
+                reminderEnabled = habit.reminderEnabled,        // ✅
                 groupShared = habit.groupShared,
                 groupId = habit.groupId,
                 createdAt = Date(habit.createdAt),
