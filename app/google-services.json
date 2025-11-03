@@ -12,7 +12,16 @@
           "package_name": "com.buyoungsil.checkcheck"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "379908067709-obr5rk6atg4moqk8810cm36nk2eh60um.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.buyoungsil.checkcheck",
+            "certificate_hash": "915474db7b49e30eefa9b5f68964bdf5c2f38342"
+          }
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAMwivwhPsoN2-8KaGGl3ebpxAxXdpfSjs"
