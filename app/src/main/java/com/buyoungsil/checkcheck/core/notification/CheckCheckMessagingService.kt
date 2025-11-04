@@ -10,17 +10,34 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.buyoungsil.checkcheck.MainActivity
 import com.buyoungsil.checkcheck.R
+import com.buyoungsil.checkcheck.core.domain.usecase.UpdateFcmTokenUseCase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 /**
  * FCM 메시지 수신 서비스
  *
- * 역할:
- * 1. FCM 토큰 생성/갱신 처리 (onNewToken)
- * 2. 푸시 알림 수신 및 표시 (onMessageReceived)
+ * ✅ Hilt를 통한 의존성 주입
+ * ✅ 토큰 자동 저장
  */
+@AndroidEntryPoint
 class CheckCheckMessagingService : FirebaseMessagingService() {
+
+    @Inject
+    lateinit var updateFcmTokenUseCase: UpdateFcmTokenUseCase
+
+    @Inject
+    lateinit var auth: FirebaseAuth
+
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
         private const val TAG = "CheckCheckFCM"
@@ -29,35 +46,52 @@ class CheckCheckMessagingService : FirebaseMessagingService() {
     }
 
     /**
-     * FCM 토큰이 생성/갱신될 때 호출
+     * ✅ FCM 토큰이 생성/갱신될 때 호출
+     * Firestore에 자동 저장
      */
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Log.d(TAG, "🔑 새 FCM 토큰: $token")
+        Log.d(TAG, "🔑 새 FCM 토큰 생성: $token")
 
-        // TODO: 서버에 토큰 저장 (필요시)
-        // TODO: Firestore에 토큰 저장 (그룹 알림용)
+        // 현재 로그인된 사용자의 토큰 저장
+        val userId = auth.currentUser?.uid
+        if (userId != null) {
+            serviceScope.launch {
+                try {
+                    updateFcmTokenUseCase(userId, token)
+                    Log.d(TAG, "✅ FCM 토큰 Firestore 저장 완료")
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ FCM 토큰 저장 실패", e)
+                }
+            }
+        } else {
+            Log.w(TAG, "⚠️ 로그인 안 된 상태 - 토큰 저장 건너뜀")
+        }
     }
 
     /**
-     * FCM 메시지를 수신했을 때 호출
-     *
-     * 이 함수에서 알림을 직접 만들어야 해!
+     * FCM 메시지 수신 시 호출
      */
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
 
-        Log.d(TAG, "📨 FCM 메시지 수신: ${remoteMessage.notification?.title}")
+        Log.d(TAG, "📨 FCM 메시지 수신")
+        Log.d(TAG, "   From: ${remoteMessage.from}")
+        Log.d(TAG, "   Data: ${remoteMessage.data}")
 
-        // ✅ 알림 채널 생성 (없으면)
+        // 알림 채널 생성
         createNotificationChannel()
 
-        // ✅ 알림 내용 추출
-        val title = remoteMessage.notification?.title ?: "CheckCheck"
-        val body = remoteMessage.notification?.body ?: "새 알림이 도착했습니다"
+        // 알림 표시
+        val title = remoteMessage.notification?.title
+            ?: remoteMessage.data["title"]
+            ?: "CheckCheck"
 
-        // ✅ 알림 표시
-        showNotification(title, body)
+        val body = remoteMessage.notification?.body
+            ?: remoteMessage.data["body"]
+            ?: "새 알림이 도착했습니다"
+
+        showNotification(title, body, remoteMessage.data)
     }
 
     /**
@@ -65,54 +99,59 @@ class CheckCheckMessagingService : FirebaseMessagingService() {
      */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "CheckCheck 알림"
-            val descriptionText = "FCM 푸시 알림"
-            val importance = NotificationManager.IMPORTANCE_HIGH
-
-            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
-                description = descriptionText
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "CheckCheck 알림",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "FCM 푸시 알림"
                 enableVibration(true)
                 enableLights(true)
             }
 
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
-
-            Log.d(TAG, "✅ 알림 채널 생성 완료: $CHANNEL_ID")
         }
     }
 
     /**
      * 알림 표시
      */
-    private fun showNotification(title: String, body: String) {
-        // 앱을 여는 Intent
+    private fun showNotification(title: String, body: String, data: Map<String, String>) {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+            // 알림 데이터에서 navigation 정보 추출
+            data["groupId"]?.let { putExtra("groupId", it) }
+            data["taskId"]?.let { putExtra("taskId", it) }
+            data["habitId"]?.let { putExtra("habitId", it) }
         }
 
         val pendingIntent = PendingIntent.getActivity(
             this,
-            0,
+            System.currentTimeMillis().toInt(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // 알림 빌드
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)  // 알림 아이콘
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(body)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)  // 클릭하면 알림 사라짐
+            .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))  // 긴 텍스트 지원
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .build()
 
-        // 알림 매니저로 알림 표시
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, notification)
 
         Log.d(TAG, "✅ 알림 표시 완료: $title")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceScope.coroutineContext.cancel()
     }
 }
