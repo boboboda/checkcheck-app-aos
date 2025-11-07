@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetMyGroupsUseCase
+import com.buyoungsil.checkcheck.feature.group.domain.usecase.LeaveGroupUseCase  // ✨ 추가
+import com.buyoungsil.checkcheck.feature.habit.domain.usecase.DeleteHabitUseCase  // ✨ 추가
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetHabitStatisticsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetPersonalHabitsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.ToggleHabitCheckUseCase
@@ -20,13 +22,14 @@ class HomeViewModel @Inject constructor(
     private val getMyGroupsUseCase: GetMyGroupsUseCase,
     private val toggleHabitCheckUseCase: ToggleHabitCheckUseCase,
     private val getHabitStatisticsUseCase: GetHabitStatisticsUseCase,
-    private val authManager: FirebaseAuthManager  // ✨ 추가
+    private val deleteHabitUseCase: DeleteHabitUseCase,  // ✨ 추가
+    private val leaveGroupUseCase: LeaveGroupUseCase,  // ✨ 추가
+    private val authManager: FirebaseAuthManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    // ✅ Firebase UID 사용
     private val currentUserId: String
         get() = authManager.currentUserId ?: "anonymous"
 
@@ -82,6 +85,36 @@ class HomeViewModel @Inject constructor(
     fun onHabitCheck(habitId: String) {
         viewModelScope.launch {
             toggleHabitCheckUseCase(habitId, currentUserId, LocalDate.now())
+        }
+    }
+
+    // ✨ 습관 삭제
+    fun onDeleteHabit(habitId: String) {
+        viewModelScope.launch {
+            deleteHabitUseCase(habitId)
+                .onSuccess {
+                    // 삭제 성공 후 자동으로 UI 갱신됨 (Flow 사용)
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(error = error.message ?: "습관 삭제 실패")
+                    }
+                }
+        }
+    }
+
+    // ✨ 그룹 탈퇴
+    fun onLeaveGroup(groupId: String) {
+        viewModelScope.launch {
+            leaveGroupUseCase(groupId, currentUserId)
+                .onSuccess {
+                    // 탈퇴 성공 후 자동으로 UI 갱신됨 (Flow 사용)
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(error = error.message ?: "그룹 탈퇴 실패")
+                    }
+                }
         }
     }
 

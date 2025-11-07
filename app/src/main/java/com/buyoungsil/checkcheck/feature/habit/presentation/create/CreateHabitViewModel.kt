@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -18,6 +19,7 @@ import javax.inject.Inject
 /**
  * 습관 생성 ViewModel
  * ✅ 알림 관련 로직 제거
+ * ✅ loadGroups의 무한 collect 문제 수정
  */
 @HiltViewModel
 class CreateHabitViewModel @Inject constructor(
@@ -43,15 +45,15 @@ class CreateHabitViewModel @Inject constructor(
     private fun loadGroups() {
         viewModelScope.launch {
             try {
-                getMyGroupsUseCase(currentUserId).collect { groups ->
-                    _uiState.update {
-                        val preselectedGroup = groups.find { it.id == preselectedGroupId }
-                        it.copy(
-                            availableGroups = groups,
-                            groupShared = preselectedGroup != null,
-                            selectedGroup = preselectedGroup
-                        )
-                    }
+                // ✅ first()를 사용하여 첫 번째 값만 가져오고 종료
+                val groups = getMyGroupsUseCase(currentUserId).first()
+                val preselectedGroup = groups.find { it.id == preselectedGroupId }
+                _uiState.update {
+                    it.copy(
+                        availableGroups = groups,
+                        groupShared = preselectedGroup != null,
+                        selectedGroup = preselectedGroup
+                    )
                 }
             } catch (e: Exception) {
                 // 그룹 로드 실패해도 습관은 만들 수 있음
@@ -92,12 +94,12 @@ class CreateHabitViewModel @Inject constructor(
         val currentState = _uiState.value
 
         if (currentState.title.isBlank()) {
-            _uiState.update { it.copy(error = "습관 이름을 입력해주세요") }
+            _uiState.update { it.copy(error = "습관 이름을 입력해주세요", loading = false) }
             return
         }
 
         if (currentState.groupShared && currentState.selectedGroup == null) {
-            _uiState.update { it.copy(error = "그룹을 선택해주세요") }
+            _uiState.update { it.copy(error = "그룹을 선택해주세요", loading = false) }
             return
         }
 

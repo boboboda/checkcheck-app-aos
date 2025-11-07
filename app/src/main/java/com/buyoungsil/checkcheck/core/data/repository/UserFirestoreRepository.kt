@@ -4,6 +4,7 @@ import com.buyoungsil.checkcheck.core.data.firebase.UserFirestoreDto
 import com.buyoungsil.checkcheck.core.domain.model.User
 import com.buyoungsil.checkcheck.core.domain.repository.UserRepository
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -59,11 +60,13 @@ class UserFirestoreRepository @Inject constructor(
     // ==================== FCM 토큰 업데이트 ====================
     override suspend fun updateFcmToken(userId: String, fcmToken: String) {
         usersCollection.document(userId)
-            .update(
+            .set(
                 mapOf(
+                    "id" to userId,
                     "fcmToken" to fcmToken,
                     "updatedAt" to com.google.firebase.Timestamp.now()
-                )
+                ),
+                com.google.firebase.firestore.SetOptions.merge()
             )
             .await()
     }

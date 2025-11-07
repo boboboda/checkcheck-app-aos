@@ -29,6 +29,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
+import com.buyoungsil.checkcheck.core.domain.usecase.InitializeUserUseCase
 import com.buyoungsil.checkcheck.core.domain.usecase.UpdateFcmTokenUseCase
 import com.buyoungsil.checkcheck.core.ui.navigation.NavGraph
 import com.buyoungsil.checkcheck.core.ui.navigation.Screen
@@ -47,6 +48,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var updateFcmTokenUseCase: UpdateFcmTokenUseCase
 
+    @Inject
+    lateinit var initializeUserUseCase: InitializeUserUseCase
+
     // ✅ 알림 권한 요청 런처
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -62,11 +66,36 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // ✅ 0. Firebase 익명 로그인 (가장 먼저!)
+        lifecycleScope.launch {
+            if (authManager.currentUser == null) {
+                Log.d(TAG, "⏳ Firebase 익명 로그인 시도...")
+                val result = authManager.signInAnonymously()
+                result.onSuccess { user ->
+                    Log.d(TAG, "✅ Firebase 익명 로그인 성공")
+                    Log.d(TAG, "   User ID: ${user.uid}")
+
+                    // ✅ User 문서 초기화 (Firestore)
+                    initializeUserUseCase(user.uid)
+
+                    // FCM 토큰 저장
+                    checkAndSaveFcmToken()
+                }.onFailure { error ->
+                    Log.e(TAG, "❌ Firebase 로그인 실패: ${error.message}")
+                }
+            } else {
+                Log.d(TAG, "✅ 이미 로그인됨: ${authManager.currentUser?.uid}")
+
+                // ✅ User 문서 확인/초기화
+                authManager.currentUserId?.let { initializeUserUseCase(it) }
+
+                // FCM 토큰 저장
+                checkAndSaveFcmToken()
+            }
+        }
+
         // ✅ 1. 알림 권한 요청
         requestNotificationPermission()
-
-        // ✅ 2. FCM 토큰 확인 및 저장 (한 번만!)
-        checkAndSaveFcmToken()
 
         setContent {
             CheckcheckTheme {

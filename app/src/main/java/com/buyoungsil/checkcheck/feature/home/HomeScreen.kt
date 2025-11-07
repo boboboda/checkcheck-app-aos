@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.buyoungsil.checkcheck.core.notification.rememberNotificationPermissionState  // ✅ 추가
+import com.buyoungsil.checkcheck.core.notification.rememberNotificationPermissionState
 import com.buyoungsil.checkcheck.core.ui.components.HabitCard
 import com.buyoungsil.checkcheck.feature.group.presentation.list.GroupCard
 
@@ -23,12 +24,17 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     onNavigateToHabitCreate: () -> Unit,
     onNavigateToGroupList: () -> Unit,
-    onNavigateToGroupDetail: (String) -> Unit
+    onNavigateToGroupDetail: (String) -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val permissionState = rememberNotificationPermissionState()  // ✅ 추가
+    val permissionState = rememberNotificationPermissionState()
 
-    // ✅ 앱 시작 시 알림 권한 자동 요청 (Android 13+만)
+    // ✨ 삭제/탈퇴 확인 다이얼로그 상태
+    var habitToDelete by remember { mutableStateOf<Pair<String, String>?>(null) } // (id, title)
+    var groupToLeave by remember { mutableStateOf<Pair<String, String>?>(null) } // (id, name)
+
+    // 앱 시작 시 알림 권한 자동 요청 (Android 13+만)
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (!permissionState.hasPermission) {
@@ -50,6 +56,11 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, "설정")
                     }
                 }
             )
@@ -137,7 +148,9 @@ fun HomeScreen(
                                 HabitCard(
                                     habitWithStats = habitWithStats,
                                     onCheck = { viewModel.onHabitCheck(habitWithStats.habit.id) },
-                                    onDelete = { /* TODO */ }
+                                    onDelete = {
+                                        habitToDelete = habitWithStats.habit.id to habitWithStats.habit.title
+                                    }
                                 )
                             }
                         }
@@ -190,7 +203,9 @@ fun HomeScreen(
                                 GroupCard(
                                     group = group,
                                     onClick = { onNavigateToGroupDetail(group.id) },
-                                    onLeave = { }
+                                    onLeave = {
+                                        groupToLeave = group.id to group.name
+                                    }
                                 )
                             }
                         }
@@ -198,5 +213,61 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    // ✨ 습관 삭제 확인 다이얼로그
+    habitToDelete?.let { (habitId, habitTitle) ->
+        AlertDialog(
+            onDismissRequest = { habitToDelete = null },
+            icon = { Icon(Icons.Default.Add, contentDescription = null) },
+            title = { Text("습관 삭제") },
+            text = { Text("'$habitTitle' 습관을 삭제하시겠습니까?\n모든 체크 기록도 함께 삭제됩니다.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onDeleteHabit(habitId)
+                        habitToDelete = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("삭제")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { habitToDelete = null }) {
+                    Text("취소")
+                }
+            }
+        )
+    }
+
+    // ✨ 그룹 탈퇴 확인 다이얼로그
+    groupToLeave?.let { (groupId, groupName) ->
+        AlertDialog(
+            onDismissRequest = { groupToLeave = null },
+            icon = { Icon(Icons.Default.Add, contentDescription = null) },
+            title = { Text("그룹 탈퇴") },
+            text = { Text("'$groupName' 그룹에서 탈퇴하시겠습니까?\n그룹 습관은 더 이상 볼 수 없습니다.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onLeaveGroup(groupId)
+                        groupToLeave = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("탈퇴")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { groupToLeave = null }) {
+                    Text("취소")
+                }
+            }
+        )
     }
 }

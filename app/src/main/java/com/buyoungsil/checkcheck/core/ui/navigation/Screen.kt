@@ -6,7 +6,7 @@ sealed class Screen(val route: String) {
 
     // Habit
     object HabitList : Screen("habit_list")
-    object HabitCreate : Screen("habit_create?groupId={groupId}") {  // ← 수정
+    object HabitCreate : Screen("habit_create?groupId={groupId}") {
         fun createRoute(groupId: String? = null) =
             if (groupId != null) "habit_create?groupId=$groupId"
             else "habit_create"
@@ -31,5 +31,10 @@ sealed class Screen(val route: String) {
         fun createRoute(groupId: String) = "task_create/$groupId"
     }
 
+    // Statistics
     object Statistics : Screen("statistics")
+
+    // Settings (✨ 추가)
+    object Settings : Screen("settings")
+    object LinkAccount : Screen("link_account")
 }

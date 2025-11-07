@@ -7,6 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.buyoungsil.checkcheck.feature.auth.presentation.link.LinkAccountScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.create.CreateGroupScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.detail.GroupDetailScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.join.JoinGroupScreen
@@ -14,6 +15,7 @@ import com.buyoungsil.checkcheck.feature.group.presentation.list.GroupListScreen
 import com.buyoungsil.checkcheck.feature.habit.presentation.create.CreateHabitScreen
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitListScreen
 import com.buyoungsil.checkcheck.feature.home.HomeScreen
+import com.buyoungsil.checkcheck.feature.settings.presentation.SettingsScreen
 import com.buyoungsil.checkcheck.feature.statistics.presentation.StatisticsScreen
 import com.buyoungsil.checkcheck.feature.task.presentation.create.CreateTaskScreen
 import com.buyoungsil.checkcheck.feature.task.presentation.list.TaskListScreen
@@ -22,7 +24,7 @@ import com.buyoungsil.checkcheck.feature.task.presentation.list.TaskListScreen
 fun NavGraph(
     navController: NavHostController,
     startDestination: String = Screen.Home.route,
-    modifier: Modifier = Modifier  // ← 추가
+    modifier: Modifier = Modifier
 ) {
     NavHost(
         navController = navController,
@@ -39,7 +41,10 @@ fun NavGraph(
                     navController.navigate(Screen.GroupList.route)
                 },
                 onNavigateToGroupDetail = { groupId ->
-                    navController.navigate(Screen.GroupDetail.createRoute(groupId))  // ✅ 수정
+                    navController.navigate(Screen.GroupDetail.createRoute(groupId))
+                },
+                onNavigateToSettings = {  // ✨ 추가
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
@@ -80,7 +85,7 @@ fun NavGraph(
                     navController.navigate(Screen.GroupJoin.route)
                 },
                 onNavigateToDetail = { groupId ->
-                    navController.navigate(Screen.GroupDetail.createRoute(groupId))  // ✅ 수정
+                    navController.navigate(Screen.GroupDetail.createRoute(groupId))
                 }
             )
         }
@@ -150,8 +155,34 @@ fun NavGraph(
             )
         }
 
+        // ========== 통계 ==========
         composable(Screen.Statistics.route) {
             StatisticsScreen()
+        }
+
+        // ========== 설정 (✨ 추가) ==========
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onNavigateToLogin = {
+                    navController.navigate(Screen.LinkAccount.route)
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // ========== 계정 연동 (✨ 추가) ==========
+        composable(Screen.LinkAccount.route) {
+            LinkAccountScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onSuccess = {
+                    // 연동 성공 시 설정 화면으로 돌아가기
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }
