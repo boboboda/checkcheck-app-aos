@@ -1,5 +1,6 @@
 package com.buyoungsil.checkcheck.feature.habit.data.repository
 
+import android.util.Log
 import com.buyoungsil.checkcheck.feature.habit.data.firebase.HabitCheckFirestoreDto
 import com.buyoungsil.checkcheck.feature.habit.data.firebase.HabitFirestoreDto
 import com.buyoungsil.checkcheck.feature.habit.domain.model.Habit
@@ -19,6 +20,7 @@ import javax.inject.Inject
 /**
  * Firebase Firestore 기반 Habit Repository 구현
  * ✅ is 접두사 제거 완료
+ * ✅ 디버깅 로그 추가
  */
 class HabitFirestoreRepository @Inject constructor(
     private val firestore: FirebaseFirestore
@@ -32,7 +34,7 @@ class HabitFirestoreRepository @Inject constructor(
     override fun getAllHabits(userId: String): Flow<List<Habit>> = callbackFlow {
         val listener = habitsCollection
             .whereEqualTo("userId", userId)
-            .whereEqualTo("active", true)  // ✅ isActive → active
+            .whereEqualTo("active", true)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
@@ -61,8 +63,8 @@ class HabitFirestoreRepository @Inject constructor(
     override fun getPersonalHabits(userId: String): Flow<List<Habit>> = callbackFlow {
         val listener = habitsCollection
             .whereEqualTo("userId", userId)
-            .whereEqualTo("groupShared", false)  // ✅ isGroupShared → groupShared
-            .whereEqualTo("active", true)        // ✅ isActive → active
+            .whereEqualTo("groupShared", false)
+            .whereEqualTo("active", true)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
@@ -82,8 +84,8 @@ class HabitFirestoreRepository @Inject constructor(
     override fun getGroupHabits(groupId: String): Flow<List<Habit>> = callbackFlow {
         val listener = habitsCollection
             .whereEqualTo("groupId", groupId)
-            .whereEqualTo("groupShared", true)   // ✅ isGroupShared → groupShared
-            .whereEqualTo("active", true)        // ✅ isActive → active
+            .whereEqualTo("groupShared", true)
+            .whereEqualTo("active", true)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
@@ -101,16 +103,30 @@ class HabitFirestoreRepository @Inject constructor(
     }
 
     override suspend fun insertHabit(habit: Habit) {
-        val dto = HabitFirestoreDto.fromDomain(habit)
-        val docId = if (habit.id.isEmpty()) {
-            habitsCollection.document().id
-        } else {
-            habit.id
-        }
+        try {
+            Log.d("HabitFirestoreRepo", "=== insertHabit 시작 ===")
+            Log.d("HabitFirestoreRepo", "habit.id: ${habit.id}")
 
-        habitsCollection.document(docId)
-            .set(dto.copy(id = docId))
-            .await()
+            val dto = HabitFirestoreDto.fromDomain(habit)
+            Log.d("HabitFirestoreRepo", "DTO 변환 완료")
+
+            val docId = if (habit.id.isEmpty()) {
+                habitsCollection.document().id
+            } else {
+                habit.id
+            }
+            Log.d("HabitFirestoreRepo", "docId: $docId")
+
+            Log.d("HabitFirestoreRepo", "Firestore set() 호출 전...")
+            habitsCollection.document(docId)
+                .set(dto.copy(id = docId))
+                .await()
+            Log.d("HabitFirestoreRepo", "✅ Firestore set() 완료!")
+
+        } catch (e: Exception) {
+            Log.e("HabitFirestoreRepo", "❌ insertHabit 에러: ${e.message}", e)
+            throw e
+        }
     }
 
     override suspend fun updateHabit(habit: Habit) {
@@ -123,7 +139,7 @@ class HabitFirestoreRepository @Inject constructor(
     override suspend fun deleteHabit(habitId: String) {
         // Soft delete
         habitsCollection.document(habitId)
-            .update("active", false)  // ✅ isActive → active
+            .update("active", false)
             .await()
     }
 
@@ -239,7 +255,7 @@ class HabitFirestoreRepository @Inject constructor(
                 habitId = habitId,
                 userId = userId,
                 date = date,
-                completed = true  // ✅ isCompleted → completed
+                completed = true
             )
             insertCheck(newCheck)
         }
@@ -250,7 +266,7 @@ class HabitFirestoreRepository @Inject constructor(
     override suspend fun getHabitStatistics(habitId: String): HabitStatistics {
         val snapshot = checksCollection
             .whereEqualTo("habitId", habitId)
-            .whereEqualTo("completed", true)  // ✅ isCompleted → completed
+            .whereEqualTo("completed", true)
             .get()
             .await()
 
@@ -275,14 +291,14 @@ class HabitFirestoreRepository @Inject constructor(
 
         val habit = getHabitById(habitId)
         val daysSinceCreation = if (habit != null) {
-            val createdDate = LocalDate.ofEpochDay(habit.createdAt / (24 * 60 * 60 * 1000))
+            val createdDate = LocalDate.ofEpochDay(habit.createdAt / (1000 * 60 * 60 * 24))
             ChronoUnit.DAYS.between(createdDate, today).toInt() + 1
         } else {
             1
         }
 
         val completionRate = if (daysSinceCreation > 0) {
-            totalChecks.toFloat() / daysSinceCreation
+            (totalChecks.toFloat() / daysSinceCreation.toFloat()) * 100
         } else {
             0f
         }
@@ -292,7 +308,7 @@ class HabitFirestoreRepository @Inject constructor(
             totalChecks = totalChecks,
             currentStreak = currentStreak,
             longestStreak = currentStreak,
-            completionRate = completionRate.coerceIn(0f, 1f),
+            completionRate = completionRate,
             thisWeekChecks = thisWeekChecks,
             thisMonthChecks = thisMonthChecks
         )
@@ -301,16 +317,15 @@ class HabitFirestoreRepository @Inject constructor(
     override suspend fun getCurrentStreak(habitId: String): Int {
         val today = LocalDate.now()
         var streak = 0
-        var checkDate = today
+        var currentDate = today
 
         while (true) {
-            val check = getCheckByDate(habitId, checkDate)
-            if (check != null && check.completed) {  // ✅ isCompleted → completed
-                streak++
-                checkDate = checkDate.minusDays(1)
-            } else {
+            val check = getCheckByDate(habitId, currentDate)
+            if (check == null || !check.completed) {
                 break
             }
+            streak++
+            currentDate = currentDate.minusDays(1)
         }
 
         return streak

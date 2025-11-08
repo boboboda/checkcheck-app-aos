@@ -9,20 +9,23 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.People
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -33,7 +36,8 @@ import com.buyoungsil.checkcheck.core.domain.usecase.InitializeUserUseCase
 import com.buyoungsil.checkcheck.core.domain.usecase.UpdateFcmTokenUseCase
 import com.buyoungsil.checkcheck.core.ui.navigation.NavGraph
 import com.buyoungsil.checkcheck.core.ui.navigation.Screen
-import com.buyoungsil.checkcheck.ui.theme.CheckcheckTheme
+import com.buyoungsil.checkcheck.ui.theme.CheckCheckTheme
+import com.buyoungsil.checkcheck.ui.theme.CheckPrimary
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -51,7 +55,6 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var initializeUserUseCase: InitializeUserUseCase
 
-    // ✅ 알림 권한 요청 런처
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -66,7 +69,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // ✅ 0. Firebase 익명 로그인 (가장 먼저!)
+        // Firebase 익명 로그인
         lifecycleScope.launch {
             if (authManager.currentUser == null) {
                 Log.d(TAG, "⏳ Firebase 익명 로그인 시도...")
@@ -74,36 +77,26 @@ class MainActivity : ComponentActivity() {
                 result.onSuccess { user ->
                     Log.d(TAG, "✅ Firebase 익명 로그인 성공")
                     Log.d(TAG, "   User ID: ${user.uid}")
-
-                    // ✅ User 문서 초기화 (Firestore)
                     initializeUserUseCase(user.uid)
-
-                    // FCM 토큰 저장
                     checkAndSaveFcmToken()
                 }.onFailure { error ->
                     Log.e(TAG, "❌ Firebase 로그인 실패: ${error.message}")
                 }
             } else {
                 Log.d(TAG, "✅ 이미 로그인됨: ${authManager.currentUser?.uid}")
-
-                // ✅ User 문서 확인/초기화
                 authManager.currentUserId?.let { initializeUserUseCase(it) }
-
-                // FCM 토큰 저장
                 checkAndSaveFcmToken()
             }
         }
 
-        // ✅ 1. 알림 권한 요청
         requestNotificationPermission()
 
         setContent {
-            CheckcheckTheme {
+            CheckCheckTheme {
                 val navController = rememberNavController()
                 val currentBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = currentBackStackEntry?.destination?.route
 
-                // ✅ authStateFlow() 사용
                 val authState by authManager.authStateFlow()
                     .collectAsState(initial = authManager.currentUser)
 
@@ -119,13 +112,14 @@ class MainActivity : ComponentActivity() {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                CircularProgressIndicator()
+                                CircularProgressIndicator(color = CheckPrimary)
                                 Spacer(modifier = Modifier.height(16.dp))
-                                Text("로그인 중...")
+                                Text("로그인 중...", color = CheckPrimary)
                             }
                         }
                     } else {
                         Scaffold(
+                            containerColor = Color.Transparent,
                             bottomBar = {
                                 if (currentRoute in listOf(
                                         Screen.Home.route,
@@ -133,38 +127,18 @@ class MainActivity : ComponentActivity() {
                                         Screen.Statistics.route
                                     )
                                 ) {
-                                    NavigationBar {
-                                        NavigationBarItem(
-                                            icon = { Icon(Icons.Default.Home, "홈") },
-                                            label = { Text("홈") },
-                                            selected = currentRoute == Screen.Home.route,
-                                            onClick = {
-                                                navController.navigate(Screen.Home.route) {
-                                                    popUpTo(Screen.Home.route) { inclusive = true }
+                                    MZBottomNavigation(
+                                        currentRoute = currentRoute,
+                                        onNavigate = { route ->
+                                            navController.navigate(route) {
+                                                popUpTo(Screen.Home.route) {
+                                                    saveState = true
                                                 }
+                                                launchSingleTop = true
+                                                restoreState = true
                                             }
-                                        )
-                                        NavigationBarItem(
-                                            icon = { Icon(Icons.Default.People, "그룹") },
-                                            label = { Text("그룹") },
-                                            selected = currentRoute == Screen.GroupList.route,
-                                            onClick = {
-                                                navController.navigate(Screen.GroupList.route) {
-                                                    popUpTo(Screen.Home.route)
-                                                }
-                                            }
-                                        )
-                                        NavigationBarItem(
-                                            icon = { Icon(Icons.Default.BarChart, "통계") },
-                                            label = { Text("통계") },
-                                            selected = currentRoute == Screen.Statistics.route,
-                                            onClick = {
-                                                navController.navigate(Screen.Statistics.route) {
-                                                    popUpTo(Screen.Home.route)
-                                                }
-                                            }
-                                        )
-                                    }
+                                        }
+                                    )
                                 }
                             }
                         ) { padding ->
@@ -180,9 +154,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * ✅ 알림 권한 요청 (Android 13+)
-     */
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             when {
@@ -202,9 +173,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * ✅ FCM 토큰 확인 및 Firestore 저장
-     */
     private fun checkAndSaveFcmToken() {
         val userId = authManager.currentUserId
         if (userId == null) {
@@ -221,7 +189,6 @@ class MainActivity : ComponentActivity() {
                     Log.d(TAG, "✅ FCM 토큰 생성 성공!")
                     Log.d(TAG, "🔑 토큰: $token")
 
-                    // ✅ Firestore에 저장
                     lifecycleScope.launch {
                         try {
                             updateFcmTokenUseCase(userId, token)
@@ -239,5 +206,94 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
+    }
+}
+
+/**
+ * ✨ MZ감성 바텀 네비게이션
+ * - 글래스모피즘 효과
+ * - 선택된 아이템 강조
+ * - 부드러운 애니메이션
+ */
+@Composable
+private fun MZBottomNavigation(
+    currentRoute: String?,
+    onNavigate: (String) -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth(),
+        color = Color.White.copy(alpha = 0.95f),
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding() // 네비게이션 바 영역만 확보
+                .height(64.dp)
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            MZNavItem(
+                icon = if (currentRoute == Screen.Home.route) Icons.Filled.Home else Icons.Outlined.Home,
+                label = "홈",
+                selected = currentRoute == Screen.Home.route,
+                onClick = { onNavigate(Screen.Home.route) }
+            )
+
+            MZNavItem(
+                icon = if (currentRoute == Screen.GroupList.route) Icons.Filled.People else Icons.Outlined.People,
+                label = "그룹",
+                selected = currentRoute == Screen.GroupList.route,
+                onClick = { onNavigate(Screen.GroupList.route) }
+            )
+
+            MZNavItem(
+                icon = if (currentRoute == Screen.Statistics.route) Icons.Filled.BarChart else Icons.Outlined.BarChart,
+                label = "통계",
+                selected = currentRoute == Screen.Statistics.route,
+                onClick = { onNavigate(Screen.Statistics.route) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun MZNavItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(
+                if (selected) CheckPrimary.copy(alpha = 0.15f)
+                else Color.Transparent
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (selected) CheckPrimary else Color.Gray,
+                modifier = Modifier.size(26.dp)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (selected) CheckPrimary else Color.Gray,
+                fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold
+                else androidx.compose.ui.text.font.FontWeight.Normal
+            )
+        }
     }
 }

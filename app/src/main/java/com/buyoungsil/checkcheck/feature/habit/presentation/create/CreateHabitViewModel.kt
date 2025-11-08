@@ -93,6 +93,10 @@ class CreateHabitViewModel @Inject constructor(
     fun onCreateHabit() {
         val currentState = _uiState.value
 
+        android.util.Log.d("CreateHabitVM", "=== 습관 생성 시작 ===")
+        android.util.Log.d("CreateHabitVM", "title: ${currentState.title}")
+        android.util.Log.d("CreateHabitVM", "loading: ${currentState.loading}")
+
         if (currentState.title.isBlank()) {
             _uiState.update { it.copy(error = "습관 이름을 입력해주세요", loading = false) }
             return
@@ -105,6 +109,7 @@ class CreateHabitViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
+            android.util.Log.d("CreateHabitVM", "로딩 시작")
 
             val habit = Habit(
                 id = "",
@@ -119,14 +124,17 @@ class CreateHabitViewModel @Inject constructor(
 
             createHabitUseCase(habit)
                 .onSuccess {
+                    android.util.Log.d("CreateHabitVM", "✅ 습관 생성 성공!")
                     _uiState.update {
                         it.copy(
                             loading = false,
                             success = true
                         )
                     }
+                    android.util.Log.d("CreateHabitVM", "success = ${_uiState.value.success}")
                 }
                 .onFailure { error ->
+                    android.util.Log.e("CreateHabitVM", "❌ 습관 생성 실패: ${error.message}")
                     _uiState.update {
                         it.copy(
                             loading = false,
