@@ -72,18 +72,19 @@ dependencies {
 
     implementation("androidx.compose.material:material-icons-extended:1.7.5")
 
-
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.messaging.ktx)
 
-
-    // ✅ WorkManager (알림 스케줄링)
+    // WorkManager (알림 스케줄링)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 
-    // ✅ Hilt WorkManager
+    // Hilt WorkManager
     implementation("androidx.hilt:hilt-work:1.1.0")
     kapt("androidx.hilt:hilt-compiler:1.1.0")
+
+    // ✨ Phosphor Icons - 세련된 아이콘 라이브러리
+    implementation("com.adamglin:phosphor-icon:1.0.0")
 }

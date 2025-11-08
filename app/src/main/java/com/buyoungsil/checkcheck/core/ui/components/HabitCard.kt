@@ -1,19 +1,12 @@
 package com.buyoungsil.checkcheck.core.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,7 +24,7 @@ import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
- * 개선된 HabitCard
+ * 개선된 HabitCard - Material Icons 사용
  * - MZ감성 귀여운 디자인
  * - 체크 시 만족스러운 애니메이션
  * - 스트릭 불꽃 그라데이션
@@ -86,7 +80,7 @@ fun HabitCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 아이콘 (원형 배경)
+            // 아이콘 (원형 배경) - Material Icon으로 변경
             Box(
                 modifier = Modifier
                     .size(56.dp)
@@ -110,9 +104,12 @@ fun HabitCard(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = habit.icon,
-                    fontSize = 28.sp
+                // Material Icon 표시
+                Icon(
+                    imageVector = getHabitIcon(habit.icon),
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = if (isChecked) Color.White else CheckPrimary
                 )
             }
 
@@ -143,7 +140,7 @@ fun HabitCard(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // 스트릭 (연속 달성일)
+                        // 스트릭
                         if (stats.currentStreak > 0) {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -156,76 +153,161 @@ fun HabitCard(
                                 Text(
                                     text = "${stats.currentStreak}일",
                                     style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CheckOrange
+                                    color = CheckOrange,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
 
-                        // 총 완료 횟수
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "✅",
-                                fontSize = 12.sp
-                            )
-                            Text(
-                                text = "${stats.totalChecks}회",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        // 완료율
-                        if (stats.completionRate > 0) {
-                            Text(
-                                text = "${(stats.completionRate * 100).toInt()}%",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (stats.completionRate >= 0.8f) CheckSuccess else CheckSecondary
-                            )
-                        }
+                        // 이번 달 달성 횟수
+                        Text(
+                            text = "이번 달 ${stats.thisMonthChecks}회",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
 
-            // 체크박스 (애니메이션)
-            AnimatedVisibility(
-                visible = true,
-                enter = scaleIn(),
-                exit = scaleOut()
+            // ✨ 체크 버튼 - 만족스러운 디자인
+            Surface(
+                modifier = Modifier
+                    .size(48.dp),
+                shape = CircleShape,
+                color = if (isChecked) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+                shadowElevation = if (isChecked) 4.dp else 0.dp
             ) {
-                IconButton(
-                    onClick = onCheck,
-                    modifier = Modifier.size(40.dp)
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = if (isChecked) {
-                            Icons.Filled.CheckCircle
-                        } else {
-                            Icons.Outlined.CheckCircle
-                        },
-                        contentDescription = if (isChecked) "완료됨" else "미완료",
-                        tint = if (isChecked) CheckPrimary else CheckGray400,
-                        modifier = Modifier.size(32.dp)
-                    )
+                    // 체크 아이콘
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isChecked,
+                        enter = scaleIn(spring(dampingRatio = 0.5f)) + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Check,
+                            contentDescription = "완료",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    // 미체크 상태 아이콘
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !isChecked,
+                        enter = scaleIn() + fadeIn(),
+                        exit = scaleOut() + fadeOut()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Check,
+                            contentDescription = "미완료",
+                            tint = CheckGray400,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
             }
-
-            // 삭제 버튼
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "삭제",
-                    tint = CheckGray400,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
         }
+    }
+}
+
+/**
+ * habit.icon key에서 Material Icon을 가져오는 함수
+ */
+private fun getHabitIcon(iconKey: String): ImageVector {
+    return when (iconKey) {
+        // 생활
+        "water_drop" -> Icons.Rounded.WaterDrop
+        "notifications" -> Icons.Rounded.Notifications
+        "calendar" -> Icons.Rounded.CalendarToday
+        "schedule" -> Icons.Rounded.Schedule
+        "home" -> Icons.Rounded.Home
+        "lightbulb" -> Icons.Rounded.Lightbulb
+        "note" -> Icons.Rounded.Note
+        "phone" -> Icons.Rounded.Phone
+        "yard" -> Icons.Rounded.Yard
+        "book" -> Icons.Rounded.Book
+        "coffee" -> Icons.Rounded.Coffee
+        "eco" -> Icons.Rounded.Eco
+
+        // 건강
+        "favorite" -> Icons.Rounded.Favorite
+        "monitor_heart" -> Icons.Rounded.MonitorHeart
+        "apple" -> Icons.Rounded.LocalDining
+        "local_hospital" -> Icons.Rounded.LocalHospital
+        "medication" -> Icons.Rounded.Medication
+        "hotel" -> Icons.Rounded.Hotel
+        "psychology" -> Icons.Rounded.Psychology
+        "sentiment" -> Icons.Rounded.SentimentSatisfied
+        "visibility" -> Icons.Rounded.Visibility
+        "volunteer" -> Icons.Rounded.VolunteerActivism
+        "thermostat" -> Icons.Rounded.Thermostat
+        "vaccines" -> Icons.Rounded.Vaccines
+
+        // 운동
+        "fitness_center" -> Icons.Rounded.FitnessCenter
+        "directions_bike" -> Icons.Rounded.DirectionsBike
+        "directions_run" -> Icons.Rounded.DirectionsRun
+        "directions_walk" -> Icons.Rounded.DirectionsWalk
+        "pool" -> Icons.Rounded.Pool
+        "self_improvement" -> Icons.Rounded.SelfImprovement
+        "basketball" -> Icons.Rounded.SportsBasketball
+        "soccer" -> Icons.Rounded.SportsSoccer
+        "tennis" -> Icons.Rounded.SportsTennis
+        "martial_arts" -> Icons.Rounded.SportsMartialArts
+        "sports_score" -> Icons.Rounded.SportsScore
+        "timer" -> Icons.Rounded.Timer
+
+        // 공부
+        "menu_book" -> Icons.Rounded.MenuBook
+        "school" -> Icons.Rounded.School
+        "edit" -> Icons.Rounded.Edit
+        "create" -> Icons.Rounded.Create
+        "backpack" -> Icons.Rounded.Backpack
+        "workspace_premium" -> Icons.Rounded.WorkspacePremium
+        "calculate" -> Icons.Rounded.Calculate
+        "science" -> Icons.Rounded.Science
+        "public" -> Icons.Rounded.Public
+        "functions" -> Icons.Rounded.Functions
+        "biotech" -> Icons.Rounded.Biotech
+        "track_changes" -> Icons.Rounded.TrackChanges
+
+        // 취미
+        "palette" -> Icons.Rounded.Palette
+        "music_note" -> Icons.Rounded.MusicNote
+        "piano" -> Icons.Rounded.Piano
+        "sports_esports" -> Icons.Rounded.SportsEsports
+        "camera_alt" -> Icons.Rounded.CameraAlt
+        "movie" -> Icons.Rounded.Movie
+        "brush" -> Icons.Rounded.Brush
+        "headphones" -> Icons.Rounded.Headphones
+        "mic" -> Icons.Rounded.Mic
+        "extension" -> Icons.Rounded.Extension
+        "celebration" -> Icons.Rounded.Celebration
+        "interests" -> Icons.Rounded.Interests
+
+        // 관계
+        "groups" -> Icons.Rounded.Groups
+        "person" -> Icons.Rounded.Person
+        "handshake" -> Icons.Rounded.Handshake
+        "forum" -> Icons.Rounded.Forum
+        "email" -> Icons.Rounded.Email
+        "card_giftcard" -> Icons.Rounded.CardGiftcard
+        "emoji_emotions" -> Icons.Rounded.EmojiEmotions
+        "waving_hand" -> Icons.Rounded.WavingHand
+        "videocam" -> Icons.Rounded.Videocam
+        "cake" -> Icons.Rounded.Cake
+        "loyalty" -> Icons.Rounded.Loyalty
+        "diversity" -> Icons.Rounded.Diversity3
+
+        // 기본값 (이모지 또는 알 수 없는 key)
+        else -> Icons.Rounded.Notifications
     }
 }

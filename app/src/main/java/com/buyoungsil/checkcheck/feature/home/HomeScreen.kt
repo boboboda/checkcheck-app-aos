@@ -90,13 +90,13 @@ fun HomeScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
                             Text(
-                                text = "체크체크",
+                                text = "첵첵",
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Black,
                                 color = Color.White
