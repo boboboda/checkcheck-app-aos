@@ -1,7 +1,12 @@
 package com.buyoungsil.checkcheck.feature.statistics.presentation
 
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
+import java.time.LocalDate
 
+/**
+ * 통계 UI State
+ * ✅ 월간 체크 데이터 추가
+ */
 data class StatisticsUiState(
     val habits: List<HabitWithStats> = emptyList(),
     val totalHabits: Int = 0,
@@ -11,6 +16,7 @@ data class StatisticsUiState(
     val currentStreak: Int = 0,
     val thisWeekChecks: Int = 0,
     val thisMonthChecks: Int = 0,
+    val monthlyCheckDates: Set<LocalDate> = emptySet(),  // ✅ 이번 달 체크한 날짜들
     val isLoading: Boolean = false,
     val error: String? = null
 )

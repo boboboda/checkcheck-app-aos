@@ -13,7 +13,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -24,11 +23,9 @@ import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
- * 개선된 HabitCard - Material Icons 사용
- * - MZ감성 귀여운 디자인
- * - 체크 시 만족스러운 애니메이션
- * - 스트릭 불꽃 그라데이션
- * - 둥글둥글한 모서리
+ * 심플하고 깔끔한 HabitCard
+ * - 완료 시: 은은한 배경색 + 초록 체크
+ * - 과한 효과 제거
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,34 +39,18 @@ fun HabitCard(
     val stats = habitWithStats.statistics
     val isChecked = habitWithStats.isCheckedToday
 
-    // 체크 상태에 따른 애니메이션
-    val scale by animateFloatAsState(
-        targetValue = if (isChecked) 1.02f else 1f,
-        animationSpec = spring(dampingRatio = 0.6f),
-        label = "card_scale"
-    )
-
-    val cardColor by animateColorAsState(
-        targetValue = if (isChecked) CheckPrimaryLight.copy(alpha = 0.1f) else Color.Transparent,
-        animationSpec = tween(300),
-        label = "card_color"
-    )
-
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .scale(scale),
+        modifier = modifier.fillMaxWidth(),
         shape = CheckShapes.HabitCard,
         colors = CardDefaults.cardColors(
             containerColor = if (isChecked) {
-                CheckPrimaryLight.copy(alpha = 0.15f)
+                CheckSuccess.copy(alpha = 0.08f)  // 은은한 초록 배경
             } else {
                 MaterialTheme.colorScheme.surface
             }
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp,
-            pressedElevation = 1.dp
+            defaultElevation = 2.dp  // 고정된 elevation
         ),
         onClick = onCheck
     ) {
@@ -80,7 +61,7 @@ fun HabitCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 아이콘 (원형 배경) - Material Icon으로 변경
+            // 아이콘
             Box(
                 modifier = Modifier
                     .size(56.dp)
@@ -89,8 +70,8 @@ fun HabitCard(
                         if (isChecked) {
                             Brush.linearGradient(
                                 colors = listOf(
-                                    CheckPrimaryLight,
-                                    CheckPrimary
+                                    CheckSuccess,
+                                    CheckSuccess.copy(alpha = 0.8f)
                                 )
                             )
                         } else {
@@ -104,7 +85,6 @@ fun HabitCard(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                // Material Icon 표시
                 Icon(
                     imageVector = getHabitIcon(habit.icon),
                     contentDescription = null,
@@ -122,7 +102,11 @@ fun HabitCard(
                     text = habit.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isChecked) CheckPrimary else MaterialTheme.colorScheme.onSurface
+                    color = if (isChecked) {
+                        CheckSuccess  // 완료 시 초록색
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
                 )
 
                 if (habit.description != null && habit.description.isNotBlank()) {
@@ -134,7 +118,7 @@ fun HabitCard(
                     )
                 }
 
-                // 통계 정보 (스트릭, 완료 횟수)
+                // 통계 정보
                 if (stats != null) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -159,7 +143,7 @@ fun HabitCard(
                             }
                         }
 
-                        // 이번 달 달성 횟수
+                        // 이번 달 횟수
                         Text(
                             text = "이번 달 ${stats.thisMonthChecks}회",
                             style = MaterialTheme.typography.labelSmall,
@@ -169,49 +153,46 @@ fun HabitCard(
                 }
             }
 
-            // ✨ 체크 버튼 - 만족스러운 디자인
-            Surface(
+            // 체크 버튼 (심플하게)
+            Box(
                 modifier = Modifier
-                    .size(48.dp),
-                shape = CircleShape,
-                color = if (isChecked) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                },
-                shadowElevation = if (isChecked) 4.dp else 0.dp
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isChecked) {
+                            CheckSuccess  // 완료: 초록색
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant  // 미완료: 회색
+                        }
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                // 체크 아이콘
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isChecked,
+                    enter = scaleIn(spring(dampingRatio = 0.6f)) + fadeIn(),
+                    exit = scaleOut() + fadeOut()
                 ) {
-                    // 체크 아이콘
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = isChecked,
-                        enter = scaleIn(spring(dampingRatio = 0.5f)) + fadeIn(),
-                        exit = scaleOut() + fadeOut()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Check,
-                            contentDescription = "완료",
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = "완료",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
 
-                    // 미체크 상태 아이콘
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = !isChecked,
-                        enter = scaleIn() + fadeIn(),
-                        exit = scaleOut() + fadeOut()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Check,
-                            contentDescription = "미완료",
-                            tint = CheckGray400,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
+                // 빈 원 아이콘
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = !isChecked,
+                    enter = scaleIn() + fadeIn(),
+                    exit = scaleOut() + fadeOut()
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Circle,
+                        contentDescription = "미완료",
+                        tint = CheckGray400,
+                        modifier = Modifier.size(28.dp)
+                    )
                 }
             }
         }
@@ -257,27 +238,27 @@ private fun getHabitIcon(iconKey: String): ImageVector {
         "directions_run" -> Icons.Rounded.DirectionsRun
         "directions_walk" -> Icons.Rounded.DirectionsWalk
         "pool" -> Icons.Rounded.Pool
+        "sports_soccer" -> Icons.Rounded.SportsSoccer
+        "sports_basketball" -> Icons.Rounded.SportsBasketball
+        "sports_tennis" -> Icons.Rounded.SportsTennis
         "self_improvement" -> Icons.Rounded.SelfImprovement
-        "basketball" -> Icons.Rounded.SportsBasketball
-        "soccer" -> Icons.Rounded.SportsSoccer
-        "tennis" -> Icons.Rounded.SportsTennis
-        "martial_arts" -> Icons.Rounded.SportsMartialArts
-        "sports_score" -> Icons.Rounded.SportsScore
-        "timer" -> Icons.Rounded.Timer
+        "sports" -> Icons.Rounded.Sports
+        "sports_martial_arts" -> Icons.Rounded.SportsMartialArts
+        "hiking" -> Icons.Rounded.Hiking
 
         // 공부
-        "menu_book" -> Icons.Rounded.MenuBook
         "school" -> Icons.Rounded.School
+        "menu_book" -> Icons.Rounded.MenuBook
         "edit" -> Icons.Rounded.Edit
-        "create" -> Icons.Rounded.Create
-        "backpack" -> Icons.Rounded.Backpack
-        "workspace_premium" -> Icons.Rounded.WorkspacePremium
-        "calculate" -> Icons.Rounded.Calculate
+        "laptop" -> Icons.Rounded.Laptop
+        "code" -> Icons.Rounded.Code
+        "quiz" -> Icons.Rounded.Quiz
+        "translate" -> Icons.Rounded.Translate
         "science" -> Icons.Rounded.Science
-        "public" -> Icons.Rounded.Public
-        "functions" -> Icons.Rounded.Functions
-        "biotech" -> Icons.Rounded.Biotech
-        "track_changes" -> Icons.Rounded.TrackChanges
+        "calculate" -> Icons.Rounded.Calculate
+        "history_edu" -> Icons.Rounded.HistoryEdu
+        "auto_stories" -> Icons.Rounded.AutoStories
+        "workspace_premium" -> Icons.Rounded.WorkspacePremium
 
         // 취미
         "palette" -> Icons.Rounded.Palette
@@ -307,7 +288,6 @@ private fun getHabitIcon(iconKey: String): ImageVector {
         "loyalty" -> Icons.Rounded.Loyalty
         "diversity" -> Icons.Rounded.Diversity3
 
-        // 기본값 (이모지 또는 알 수 없는 key)
-        else -> Icons.Rounded.Notifications
+        else -> Icons.Rounded.Check
     }
 }

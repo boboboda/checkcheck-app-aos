@@ -37,7 +37,7 @@ object CheckShapes {
     val FloatingActionButton = RoundedCornerShape(16.dp)
 
     // 습관 카드 - 약간 큰 둥근 모서리
-    val HabitCard = RoundedCornerShape(20.dp)
+    val HabitCard = RoundedCornerShape(3.dp)
 
     // 그룹 카드 - 더 둥근 느낌
     val GroupCard = RoundedCornerShape(24.dp)

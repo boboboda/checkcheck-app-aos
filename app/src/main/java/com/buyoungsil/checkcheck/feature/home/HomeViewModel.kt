@@ -25,7 +25,7 @@ class HomeViewModel @Inject constructor(
     private val getMyGroupsUseCase: GetMyGroupsUseCase,
     private val toggleHabitCheckUseCase: ToggleHabitCheckUseCase,
     private val getHabitStatisticsUseCase: GetHabitStatisticsUseCase,
-    private val repository: HabitRepository,  // ✅ 추가
+    private val repository: HabitRepository,
     private val deleteHabitUseCase: DeleteHabitUseCase,
     private val leaveGroupUseCase: LeaveGroupUseCase,
     private val authManager: FirebaseAuthManager
@@ -52,14 +52,14 @@ class HomeViewModel @Inject constructor(
             try {
                 combine(
                     getPersonalHabitsUseCase(currentUserId),
-                    getMyGroupsUseCase(currentUserId)
-                ) { habits, groups ->
+                    getMyGroupsUseCase(currentUserId),
+                    repository.getChecksByUserAndDate(currentUserId, LocalDate.now())
+                ) { habits, groups, todayChecks ->
+                    val checkedHabitIds = todayChecks.map { it.habitId }.toSet()
+
                     val habitsWithStats = habits.map { habit ->
                         val stats = getHabitStatisticsUseCase(habit.id).getOrNull()
-
-                        // ✅ Repository에서 오늘 날짜 체크 확인
-                        val todayCheck = repository.getCheckByDate(habit.id, LocalDate.now())
-                        val isCheckedToday = todayCheck != null
+                        val isCheckedToday = checkedHabitIds.contains(habit.id)
 
                         HabitWithStats(
                             habit = habit,
@@ -98,6 +98,26 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             Log.d(TAG, "습관 체크 시작: habitId=$habitId")
 
+            // ✅ 1단계: 즉시 UI 업데이트 (Optimistic Update)
+            val currentState = _uiState.value
+            val updatedHabits = currentState.habits.map { habitWithStats ->
+                if (habitWithStats.habit.id == habitId) {
+                    habitWithStats.copy(isCheckedToday = !habitWithStats.isCheckedToday)
+                } else {
+                    habitWithStats
+                }
+            }
+
+            val newCompletedCount = updatedHabits.count { it.isCheckedToday }
+
+            _uiState.update {
+                it.copy(
+                    habits = updatedHabits,
+                    todayCompletedCount = newCompletedCount
+                )
+            }
+
+            // ✅ 2단계: 백그라운드에서 Firestore 업데이트
             try {
                 val result = toggleHabitCheckUseCase(
                     habitId = habitId,
@@ -106,18 +126,30 @@ class HomeViewModel @Inject constructor(
                 )
 
                 result.onSuccess {
-                    Log.d(TAG, "✅ 습관 체크 성공: habitId=$habitId")
-                    // Flow가 자동으로 업데이트해줌
+                    Log.d(TAG, "✅ 습관 체크 Firestore 동기화 성공: habitId=$habitId")
+                    // Flow가 자동으로 업데이트하지만 이미 UI는 변경됨
                 }.onFailure { error ->
                     Log.e(TAG, "❌ 습관 체크 실패: ${error.message}", error)
+
+                    // ✅ 3단계: 실패 시 원래 상태로 롤백
                     _uiState.update {
-                        it.copy(error = error.message ?: "습관 체크 실패")
+                        it.copy(
+                            habits = currentState.habits,
+                            todayCompletedCount = currentState.todayCompletedCount,
+                            error = error.message ?: "습관 체크 실패"
+                        )
                     }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ 습관 체크 예외 발생", e)
+
+                // 실패 시 롤백
                 _uiState.update {
-                    it.copy(error = e.message ?: "습관 체크 중 오류 발생")
+                    it.copy(
+                        habits = currentState.habits,
+                        todayCompletedCount = currentState.todayCompletedCount,
+                        error = e.message ?: "습관 체크 중 오류 발생"
+                    )
                 }
             }
         }

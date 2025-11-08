@@ -84,7 +84,8 @@ fun HomeScreen(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding(),
+//                        .statusBarsPadding()
+                    ,
                     color = Color.Transparent
                 ) {
                     Row(
@@ -232,7 +233,10 @@ fun HomeScreen(
                                     )
                                 }
                             } else {
-                                items(uiState.habits) { habitWithStats ->
+                                items(
+                                    items = uiState.habits,
+                                    key = { it.habit.id }  // ✨ 각 습관의 고유 ID를 key로 사용
+                                ) { habitWithStats ->
                                     HabitCard(
                                         habitWithStats = habitWithStats,
                                         onCheck = { viewModel.onHabitCheck(habitWithStats.habit.id) },

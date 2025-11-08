@@ -69,33 +69,28 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Firebase 익명 로그인
         lifecycleScope.launch {
-            if (authManager.currentUser == null) {
-                Log.d(TAG, "⏳ Firebase 익명 로그인 시도...")
-                val result = authManager.signInAnonymously()
-                result.onSuccess { user ->
-                    Log.d(TAG, "✅ Firebase 익명 로그인 성공")
-                    Log.d(TAG, "   User ID: ${user.uid}")
-                    initializeUserUseCase(user.uid)
-                    checkAndSaveFcmToken()
-                }.onFailure { error ->
-                    Log.e(TAG, "❌ Firebase 로그인 실패: ${error.message}")
+            try {
+                authManager.signInAnonymously()
+                Log.d(TAG, "익명 로그인 성공")
+
+                val userId = authManager.currentUserId
+                if (userId != null) {
+                    initializeUserUseCase(userId)
                 }
-            } else {
-                Log.d(TAG, "✅ 이미 로그인됨: ${authManager.currentUser?.uid}")
-                authManager.currentUserId?.let { initializeUserUseCase(it) }
+
+                requestNotificationPermission()
                 checkAndSaveFcmToken()
+            } catch (e: Exception) {
+                Log.e(TAG, "초기화 실패", e)
             }
         }
-
-        requestNotificationPermission()
 
         setContent {
             CheckCheckTheme {
                 val navController = rememberNavController()
-                val currentBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = currentBackStackEntry?.destination?.route
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
 
                 val authState by authManager.authStateFlow()
                     .collectAsState(initial = authManager.currentUser)
@@ -130,11 +125,15 @@ class MainActivity : ComponentActivity() {
                                     MZBottomNavigation(
                                         currentRoute = currentRoute,
                                         onNavigate = { route ->
+                                            // ✅ 수정된 네비게이션 로직
                                             navController.navigate(route) {
-                                                popUpTo(Screen.Home.route) {
+                                                // 첫 화면(Home)을 제외한 모든 백스택 제거
+                                                popUpTo(navController.graph.startDestinationId) {
                                                     saveState = true
                                                 }
+                                                // 같은 화면 중복 방지
                                                 launchSingleTop = true
+                                                // 상태 복원
                                                 restoreState = true
                                             }
                                         }
@@ -221,15 +220,14 @@ private fun MZBottomNavigation(
     onNavigate: (String) -> Unit
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         color = Color.White.copy(alpha = 0.95f),
         shadowElevation = 8.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding() // 네비게이션 바 영역만 확보
+                .navigationBarsPadding()
                 .height(64.dp)
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
