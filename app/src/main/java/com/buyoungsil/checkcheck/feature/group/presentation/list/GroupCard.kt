@@ -1,261 +1,313 @@
 package com.buyoungsil.checkcheck.feature.group.presentation.list
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.buyoungsil.checkcheck.feature.group.domain.model.Group
-import com.buyoungsil.checkcheck.feature.group.domain.model.GroupType
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
- * 개선된 GroupCard - Material Icons 사용
- * - 그룹 타입별 컬러 적용
- * - 둥글둥글한 디자인
- * - 멤버 수 강조
+ * 🧡 오렌지 테마 그룹 카드
+ * 그룹 타입별 따뜻한 색상 구분
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupCard(
-    group: Group,
+    groupName: String,
+    groupType: String,
+    memberCount: Int,
+    completionRate: Float,
+    groupIcon: String = "👥",
+    isActive: Boolean = true,
     onClick: () -> Unit,
-    onLeave: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 그룹 타입별 컬러
-    val groupColor = when (group.type) {
-        GroupType.FAMILY -> GroupFamilyColor
-        GroupType.COUPLE -> GroupCoupleColor
-        GroupType.STUDY -> GroupStudyColor
-        GroupType.EXERCISE -> GroupExerciseColor
-        GroupType.PROJECT -> GroupProjectColor
-        GroupType.CUSTOM -> GroupCustomColor
-    }
+    val typeColor = getGroupTypeColor(groupType)
+
+    // 활성 상태 애니메이션
+    val scale by animateFloatAsState(
+        targetValue = if (isActive) 1f else 0.98f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "scale"
+    )
+
+    val elevation by animateFloatAsState(
+        targetValue = if (isActive) 4f else 1f,
+        animationSpec = spring(),
+        label = "elevation"
+    )
 
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = CheckShapes.GroupCard,
+        modifier = modifier
+            .fillMaxWidth()
+            .scale(scale)
+            .clickable(onClick = onClick),
+        shape = ComponentShapes.GroupCard,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = Color.White
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp
-        ),
-        onClick = onClick
+            defaultElevation = elevation.dp
+        )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(20.dp)
         ) {
-            // 그룹 아이콘 (그라데이션 배경) - Material Icon으로 변경
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                groupColor.copy(alpha = 0.3f),
-                                groupColor.copy(alpha = 0.6f)
-                            )
-                        )
-                    ),
-                contentAlignment = Alignment.Center
+            // 상단: 아이콘 + 그룹명 + 타입
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Material Icon 표시
-                Icon(
-                    imageVector = getGroupIcon(group.icon),
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = groupColor
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // 🎨 그라데이션 아이콘 배경
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(ComponentShapes.IconBackground)
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(
+                                        typeColor.copy(alpha = 0.8f),
+                                        typeColor
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = groupIcon,
+                            fontSize = 28.sp
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text = groupName,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimaryLight
+                        )
+
+                        // 타입 뱃지
+                        Surface(
+                            shape = ComponentShapes.Badge,
+                            color = typeColor.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = getGroupTypeName(groupType),
+                                style = CustomTypography.chip,
+                                fontWeight = FontWeight.SemiBold,
+                                color = typeColor,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
             }
 
-            // 그룹 정보
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 중단: 멤버 수 + 달성률
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // 그룹 타입 뱃지
-                Surface(
-                    shape = CheckShapes.Chip,
-                    color = groupColor.copy(alpha = 0.2f)
-                ) {
-                    Text(
-                        text = group.type.displayName,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = groupColor,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // 그룹 이름
-                Text(
-                    text = group.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
                 // 멤버 수
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.Groups,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        imageVector = Icons.Default.Group,
+                        contentDescription = "멤버",
+                        tint = typeColor,
+                        modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "${group.memberIds.size}명",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    // 최대 인원 표시
-                    Text(
-                        text = "/ ${group.maxMembers}명",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CheckGray500
+                        text = "${memberCount}명",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = typeColor
                     )
                 }
-            }
 
-            // 나가기 버튼
-            IconButton(
-                onClick = onLeave,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ExitToApp,
-                    contentDescription = "그룹 나가기",
-                    tint = CheckGray400
+                // 달성률
+                Text(
+                    text = "${(completionRate * 100).toInt()}%",
+                    style = CustomTypography.numberMedium.copy(fontSize = 20.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = getCompletionColor(completionRate * 100)
                 )
             }
 
-            // 화살표
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = "상세보기",
-                tint = CheckGray400,
-                modifier = Modifier.size(24.dp)
-            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 하단: 프로그레스 바
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "오늘의 달성률",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondaryLight,
+                    fontWeight = FontWeight.Medium
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 프로그레스 바
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(12.dp)
+                        .clip(ComponentShapes.ProgressBar)
+                        .background(OrangeSurfaceVariant)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(completionRate)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        typeColor.copy(alpha = 0.8f),
+                                        typeColor
+                                    )
+                                )
+                            )
+                    )
+                }
+            }
         }
     }
 }
 
 /**
- * group.icon key에서 Material Icon을 가져오는 함수
+ * 🧡 간단한 그룹 카드
  */
-private fun getGroupIcon(iconKey: String): ImageVector {
-    return when (iconKey) {
-        // 생활
-        "water_drop" -> Icons.Rounded.WaterDrop
-        "notifications" -> Icons.Rounded.Notifications
-        "calendar" -> Icons.Rounded.CalendarToday
-        "schedule" -> Icons.Rounded.Schedule
-        "home" -> Icons.Rounded.Home
-        "lightbulb" -> Icons.Rounded.Lightbulb
-        "note" -> Icons.Rounded.Note
-        "phone" -> Icons.Rounded.Phone
-        "yard" -> Icons.Rounded.Yard
-        "book" -> Icons.Rounded.Book
-        "coffee" -> Icons.Rounded.Coffee
-        "eco" -> Icons.Rounded.Eco
+@Composable
+fun SimpleGroupCard(
+    groupName: String,
+    groupType: String,
+    memberCount: Int,
+    groupIcon: String = "👥",
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val typeColor = getGroupTypeColor(groupType)
 
-        // 건강
-        "favorite" -> Icons.Rounded.Favorite
-        "monitor_heart" -> Icons.Rounded.MonitorHeart
-        "apple" -> Icons.Rounded.LocalDining
-        "local_hospital" -> Icons.Rounded.LocalHospital
-        "medication" -> Icons.Rounded.Medication
-        "hotel" -> Icons.Rounded.Hotel
-        "psychology" -> Icons.Rounded.Psychology
-        "sentiment" -> Icons.Rounded.SentimentSatisfied
-        "visibility" -> Icons.Rounded.Visibility
-        "volunteer" -> Icons.Rounded.VolunteerActivism
-        "thermostat" -> Icons.Rounded.Thermostat
-        "vaccines" -> Icons.Rounded.Vaccines
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = ComponentShapes.GroupCard,
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // 아이콘 배경
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(ComponentShapes.IconBackground)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    typeColor.copy(alpha = 0.15f),
+                                    typeColor.copy(alpha = 0.25f)
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = groupIcon,
+                        fontSize = 24.sp
+                    )
+                }
 
-        // 운동
-        "fitness_center" -> Icons.Rounded.FitnessCenter
-        "directions_bike" -> Icons.Rounded.DirectionsBike
-        "directions_run" -> Icons.Rounded.DirectionsRun
-        "directions_walk" -> Icons.Rounded.DirectionsWalk
-        "pool" -> Icons.Rounded.Pool
-        "self_improvement" -> Icons.Rounded.SelfImprovement
-        "basketball" -> Icons.Rounded.SportsBasketball
-        "soccer" -> Icons.Rounded.SportsSoccer
-        "tennis" -> Icons.Rounded.SportsTennis
-        "martial_arts" -> Icons.Rounded.SportsMartialArts
-        "sports_score" -> Icons.Rounded.SportsScore
-        "timer" -> Icons.Rounded.Timer
+                Column {
+                    Text(
+                        text = groupName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryLight
+                    )
 
-        // 공부
-        "menu_book" -> Icons.Rounded.MenuBook
-        "school" -> Icons.Rounded.School
-        "edit" -> Icons.Rounded.Edit
-        "create" -> Icons.Rounded.Create
-        "backpack" -> Icons.Rounded.Backpack
-        "workspace_premium" -> Icons.Rounded.WorkspacePremium
-        "calculate" -> Icons.Rounded.Calculate
-        "science" -> Icons.Rounded.Science
-        "public" -> Icons.Rounded.Public
-        "functions" -> Icons.Rounded.Functions
-        "biotech" -> Icons.Rounded.Biotech
-        "track_changes" -> Icons.Rounded.TrackChanges
+                    Text(
+                        text = "${getGroupTypeName(groupType)} · ${memberCount}명",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondaryLight
+                    )
+                }
+            }
 
-        // 취미
-        "palette" -> Icons.Rounded.Palette
-        "music_note" -> Icons.Rounded.MusicNote
-        "piano" -> Icons.Rounded.Piano
-        "sports_esports" -> Icons.Rounded.SportsEsports
-        "camera_alt" -> Icons.Rounded.CameraAlt
-        "movie" -> Icons.Rounded.Movie
-        "brush" -> Icons.Rounded.Brush
-        "headphones" -> Icons.Rounded.Headphones
-        "mic" -> Icons.Rounded.Mic
-        "extension" -> Icons.Rounded.Extension
-        "celebration" -> Icons.Rounded.Celebration
-        "interests" -> Icons.Rounded.Interests
+            Surface(
+                shape = ComponentShapes.Badge,
+                color = typeColor.copy(alpha = 0.15f)
+            ) {
+                Text(
+                    text = getGroupTypeName(groupType),
+                    style = CustomTypography.badge,
+                    fontWeight = FontWeight.Bold,
+                    color = typeColor,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
 
-        // 관계
-        "groups" -> Icons.Rounded.Groups
-        "person" -> Icons.Rounded.Person
-        "handshake" -> Icons.Rounded.Handshake
-        "forum" -> Icons.Rounded.Forum
-        "email" -> Icons.Rounded.Email
-        "card_giftcard" -> Icons.Rounded.CardGiftcard
-        "emoji_emotions" -> Icons.Rounded.EmojiEmotions
-        "waving_hand" -> Icons.Rounded.WavingHand
-        "videocam" -> Icons.Rounded.Videocam
-        "cake" -> Icons.Rounded.Cake
-        "loyalty" -> Icons.Rounded.Loyalty
-        "diversity" -> Icons.Rounded.Diversity3
-
-        // 기본값 (이모지 또는 알 수 없는 key)
-        else -> Icons.Rounded.Groups // 그룹의 기본 아이콘
+/**
+ * 그룹 타입 한글명 반환
+ */
+private fun getGroupTypeName(type: String): String {
+    return when (type.lowercase()) {
+        "family" -> "가족"
+        "couple" -> "연인"
+        "study" -> "스터디"
+        "exercise" -> "운동"
+        "project" -> "프로젝트"
+        else -> "커스텀"
     }
 }

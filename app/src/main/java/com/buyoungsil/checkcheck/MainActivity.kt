@@ -25,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -36,8 +37,7 @@ import com.buyoungsil.checkcheck.core.domain.usecase.InitializeUserUseCase
 import com.buyoungsil.checkcheck.core.domain.usecase.UpdateFcmTokenUseCase
 import com.buyoungsil.checkcheck.core.ui.navigation.NavGraph
 import com.buyoungsil.checkcheck.core.ui.navigation.Screen
-import com.buyoungsil.checkcheck.ui.theme.CheckCheckTheme
-import com.buyoungsil.checkcheck.ui.theme.CheckPrimary
+import com.buyoungsil.checkcheck.ui.theme.*
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -95,11 +95,21 @@ class MainActivity : ComponentActivity() {
                 val authState by authManager.authStateFlow()
                     .collectAsState(initial = authManager.currentUser)
 
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                // 🧡 따뜻한 오렌지 그라데이션 배경
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    CheckBgGradientStart,  // #FFF5F0
+                                    CheckBgGradientEnd     // #FFEBE0
+                                )
+                            )
+                        )
                 ) {
                     if (authState == null) {
+                        // 로딩 화면
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -116,24 +126,21 @@ class MainActivity : ComponentActivity() {
                         Scaffold(
                             containerColor = Color.Transparent,
                             bottomBar = {
-                                if (currentRoute in listOf(
-                                        Screen.Home.route,
-                                        Screen.GroupList.route,
-                                        Screen.Statistics.route
-                                    )
-                                ) {
-                                    MZBottomNavigation(
+                                val shouldShowBottomBar = currentRoute in listOf(
+                                    Screen.Home.route,
+                                    Screen.GroupList.route,
+                                    Screen.Statistics.route
+                                )
+
+                                if (shouldShowBottomBar) {
+                                    WarmBottomNavigation(
                                         currentRoute = currentRoute,
                                         onNavigate = { route ->
-                                            // ✅ 수정된 네비게이션 로직
                                             navController.navigate(route) {
-                                                // 첫 화면(Home)을 제외한 모든 백스택 제거
-                                                popUpTo(navController.graph.startDestinationId) {
-                                                    saveState = true
+                                                popUpTo(Screen.Home.route) {
+                                                    inclusive = (route == Screen.Home.route)
                                                 }
-                                                // 같은 화면 중복 방지
                                                 launchSingleTop = true
-                                                // 상태 복원
                                                 restoreState = true
                                             }
                                         }
@@ -209,20 +216,21 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * ✨ MZ감성 바텀 네비게이션
- * - 글래스모피즘 효과
- * - 선택된 아이템 강조
- * - 부드러운 애니메이션
+ * 🧡 따뜻한 오렌지 바텀 네비게이션
  */
 @Composable
-private fun MZBottomNavigation(
+private fun WarmBottomNavigation(
     currentRoute: String?,
     onNavigate: (String) -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.White.copy(alpha = 0.95f),
-        shadowElevation = 8.dp
+        color = Color.White,
+        tonalElevation = 8.dp,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(
+            topStart = 20.dp,
+            topEnd = 20.dp
+        )
     ) {
         Row(
             modifier = Modifier
@@ -233,32 +241,44 @@ private fun MZBottomNavigation(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            MZNavItem(
+            WarmNavItem(
                 icon = if (currentRoute == Screen.Home.route) Icons.Filled.Home else Icons.Outlined.Home,
                 label = "홈",
                 selected = currentRoute == Screen.Home.route,
-                onClick = { onNavigate(Screen.Home.route) }
+                onClick = {
+                    if (currentRoute != Screen.Home.route) {
+                        onNavigate(Screen.Home.route)
+                    }
+                }
             )
 
-            MZNavItem(
+            WarmNavItem(
                 icon = if (currentRoute == Screen.GroupList.route) Icons.Filled.People else Icons.Outlined.People,
                 label = "그룹",
                 selected = currentRoute == Screen.GroupList.route,
-                onClick = { onNavigate(Screen.GroupList.route) }
+                onClick = {
+                    if (currentRoute != Screen.GroupList.route) {
+                        onNavigate(Screen.GroupList.route)
+                    }
+                }
             )
 
-            MZNavItem(
+            WarmNavItem(
                 icon = if (currentRoute == Screen.Statistics.route) Icons.Filled.BarChart else Icons.Outlined.BarChart,
                 label = "통계",
                 selected = currentRoute == Screen.Statistics.route,
-                onClick = { onNavigate(Screen.Statistics.route) }
+                onClick = {
+                    if (currentRoute != Screen.Statistics.route) {
+                        onNavigate(Screen.Statistics.route)
+                    }
+                }
             )
         }
     }
 }
 
 @Composable
-private fun MZNavItem(
+private fun WarmNavItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     selected: Boolean,
@@ -268,7 +288,7 @@ private fun MZNavItem(
         modifier = Modifier
             .clip(CircleShape)
             .background(
-                if (selected) CheckPrimary.copy(alpha = 0.15f)
+                if (selected) CheckPrimary.copy(alpha = 0.1f)
                 else Color.Transparent
             )
             .clickable(onClick = onClick)
@@ -282,13 +302,13 @@ private fun MZNavItem(
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = if (selected) CheckPrimary else Color.Gray,
+                tint = if (selected) CheckPrimary else CheckGray500,
                 modifier = Modifier.size(26.dp)
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (selected) CheckPrimary else Color.Gray,
+                color = if (selected) CheckPrimary else CheckGray500,
                 fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold
                 else androidx.compose.ui.text.font.FontWeight.Normal
             )

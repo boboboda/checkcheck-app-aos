@@ -11,6 +11,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -19,8 +20,8 @@ import javax.inject.Inject
 
 /**
  * Firebase Firestore 기반 Habit Repository 구현
- * ✅ is 접두사 제거 완료
- * ✅ 디버깅 로그 추가
+ * ✅ 달성률: 생성일부터 오늘까지 체크해야 할 날 대비 실제 체크한 날의 비율
+ * ✅ 스트릭: 연속으로 체크한 일수
  */
 class HabitFirestoreRepository @Inject constructor(
     private val firestore: FirebaseFirestore
@@ -28,6 +29,10 @@ class HabitFirestoreRepository @Inject constructor(
 
     private val habitsCollection = firestore.collection("habits")
     private val checksCollection = firestore.collection("habit_checks")
+
+    companion object {
+        private const val TAG = "HabitFirestoreRepo"
+    }
 
     // ==================== Habit CRUD ====================
 
@@ -104,27 +109,27 @@ class HabitFirestoreRepository @Inject constructor(
 
     override suspend fun insertHabit(habit: Habit) {
         try {
-            Log.d("HabitFirestoreRepo", "=== insertHabit 시작 ===")
-            Log.d("HabitFirestoreRepo", "habit.id: ${habit.id}")
+            Log.d(TAG, "=== insertHabit 시작 ===")
+            Log.d(TAG, "habit.id: ${habit.id}")
 
             val dto = HabitFirestoreDto.fromDomain(habit)
-            Log.d("HabitFirestoreRepo", "DTO 변환 완료")
+            Log.d(TAG, "DTO 변환 완료")
 
             val docId = if (habit.id.isEmpty()) {
                 habitsCollection.document().id
             } else {
                 habit.id
             }
-            Log.d("HabitFirestoreRepo", "docId: $docId")
+            Log.d(TAG, "docId: $docId")
 
-            Log.d("HabitFirestoreRepo", "Firestore set() 호출 전...")
+            Log.d(TAG, "Firestore set() 호출 전...")
             habitsCollection.document(docId)
                 .set(dto.copy(id = docId))
                 .await()
-            Log.d("HabitFirestoreRepo", "✅ Firestore set() 완료!")
+            Log.d(TAG, "✅ Firestore set() 완료!")
 
         } catch (e: Exception) {
-            Log.e("HabitFirestoreRepo", "❌ insertHabit 에러: ${e.message}", e)
+            Log.e(TAG, "❌ insertHabit 에러: ${e.message}", e)
             throw e
         }
     }
@@ -264,51 +269,58 @@ class HabitFirestoreRepository @Inject constructor(
     // ==================== Statistics ====================
 
     override suspend fun getHabitStatistics(habitId: String): HabitStatistics {
-        val snapshot = checksCollection
-            .whereEqualTo("habitId", habitId)
-            .whereEqualTo("completed", true)
-            .get()
-            .await()
+        val habit = getHabitById(habitId)
+            ?: return HabitStatistics(habitId = habitId)
 
-        val checks = snapshot.documents.mapNotNull {
-            it.toObject(HabitCheckFirestoreDto::class.java)?.toDomain()
-        }
+        val allChecks = getChecksByHabit(habitId).first()
+        val completedChecks = allChecks.filter { it.completed }
 
-        val totalChecks = checks.size
+        val totalChecks = completedChecks.size
         val currentStreak = getCurrentStreak(habitId)
+
+        // ✅ longestStreak 계산
+        val longestStreak = calculateLongestStreak(completedChecks)
 
         val today = LocalDate.now()
         val weekStart = today.minusDays(today.dayOfWeek.value.toLong() - 1)
         val monthStart = today.withDayOfMonth(1)
 
-        val thisWeekChecks = checks.count {
-            it.date >= weekStart && it.date <= today
+        val thisWeekChecks = completedChecks.count { check ->
+            check.date >= weekStart && check.date <= today
         }
 
-        val thisMonthChecks = checks.count {
-            it.date >= monthStart && it.date <= today
+        val thisMonthChecks = completedChecks.count { check ->
+            check.date >= monthStart && check.date <= today
         }
 
-        val habit = getHabitById(habitId)
-        val daysSinceCreation = if (habit != null) {
-            val createdDate = LocalDate.ofEpochDay(habit.createdAt / (1000 * 60 * 60 * 24))
-            ChronoUnit.DAYS.between(createdDate, today).toInt() + 1
-        } else {
-            1
-        }
+        // ✅ 달성률 계산: 생성일부터 오늘까지의 일수 대비 체크한 일수
+        val createdDate = LocalDate.ofEpochDay(habit.createdAt / (1000 * 60 * 60 * 24))
+        val daysSinceCreation = ChronoUnit.DAYS.between(createdDate, today).toInt() + 1
 
+        // 달성률 = 총 체크 수 / 생성 후 경과 일수
         val completionRate = if (daysSinceCreation > 0) {
-            (totalChecks.toFloat() / daysSinceCreation.toFloat()) * 100
+            (totalChecks.toFloat() / daysSinceCreation.toFloat()).coerceIn(0f, 1f)
         } else {
             0f
         }
+
+        Log.d(TAG, "=== 습관 통계 계산 ===")
+        Log.d(TAG, "습관: ${habit.title}")
+        Log.d(TAG, "생성일: $createdDate")
+        Log.d(TAG, "오늘: $today")
+        Log.d(TAG, "경과 일수: $daysSinceCreation 일")
+        Log.d(TAG, "총 체크: $totalChecks 회")
+        Log.d(TAG, "달성률 (0~1): $completionRate")
+        Log.d(TAG, "달성률 (%): ${(completionRate * 100).toInt()}%")
+        Log.d(TAG, "현재 스트릭: $currentStreak 일 (연속)")
+        Log.d(TAG, "최장 스트릭: $longestStreak 일")
 
         return HabitStatistics(
             habitId = habitId,
             totalChecks = totalChecks,
             currentStreak = currentStreak,
-            longestStreak = currentStreak,
-            completionRate = completionRate,
+            longestStreak = longestStreak,
+            completionRate = completionRate,  // ✅ 0~1 범위
             thisWeekChecks = thisWeekChecks,
             thisMonthChecks = thisMonthChecks
         )
@@ -329,5 +341,34 @@ class HabitFirestoreRepository @Inject constructor(
         }
 
         return streak
+    }
+
+    /**
+     * ✅ 최장 스트릭 계산
+     * 전체 체크 기록에서 가장 긴 연속 체크 일수를 찾음
+     */
+    private fun calculateLongestStreak(completedChecks: List<HabitCheck>): Int {
+        if (completedChecks.isEmpty()) return 0
+
+        // 날짜순 정렬
+        val sortedDates = completedChecks.map { it.date }.sorted()
+
+        var maxStreak = 1
+        var currentStreak = 1
+
+        for (i in 1 until sortedDates.size) {
+            val prevDate = sortedDates[i - 1]
+            val currDate = sortedDates[i]
+
+            // 연속된 날짜인지 확인
+            if (ChronoUnit.DAYS.between(prevDate, currDate) == 1L) {
+                currentStreak++
+                maxStreak = maxOf(maxStreak, currentStreak)
+            } else {
+                currentStreak = 1
+            }
+        }
+
+        return maxStreak
     }
 }

@@ -662,7 +662,7 @@ fun HabitRankCard(
     rank: Int
 ) {
     val stats = habitWithStats.statistics
-    val completionRate = stats?.completionRate ?: 0f
+    val completionRate = (stats?.completionRate ?: 0f) * 100f
 
     Card(
         modifier = Modifier.fillMaxWidth(),

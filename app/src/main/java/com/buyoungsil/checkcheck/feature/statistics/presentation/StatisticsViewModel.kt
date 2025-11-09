@@ -18,7 +18,7 @@ import javax.inject.Inject
 
 /**
  * 통계 ViewModel
- * ✅ 실제 Firestore 데이터 사용
+ * ✅ 평균 달성률 계산 로직 개선 (0~1 범위를 % 단위로 변환)
  */
 @HiltViewModel
 class StatisticsViewModel @Inject constructor(
@@ -47,17 +47,24 @@ class StatisticsViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
 
             try {
-                // ✅ 습관 목록 + 월간 체크 데이터 결합
                 combine(
                     getPersonalHabitsUseCase(currentUserId),
                     getMonthlyChecks()
                 ) { habits, monthlyCheckDates ->
+                    Log.d(TAG, "=== 통계 로드 시작 ===")
                     Log.d(TAG, "습관 수: ${habits.size}")
                     Log.d(TAG, "이번 달 체크한 날: ${monthlyCheckDates.size}일")
 
                     val habitsWithStats = habits.map { habit ->
                         val stats = getHabitStatisticsUseCase(habit.id).getOrNull()
                         val isCheckedToday = stats?.currentStreak ?: 0 >= 1
+
+                        // ✅ 각 습관 통계 로깅
+                        Log.d(TAG, "  습관: ${habit.title}")
+                        Log.d(TAG, "    - 총 체크: ${stats?.totalChecks}")
+                        Log.d(TAG, "    - 달성률 (0~1): ${stats?.completionRate}")
+                        Log.d(TAG, "    - 달성률 (%): ${stats?.completionRate?.let { it * 100 }}%")
+                        Log.d(TAG, "    - 현재 스트릭: ${stats?.currentStreak}")
 
                         HabitWithStats(
                             habit = habit,
@@ -66,11 +73,21 @@ class StatisticsViewModel @Inject constructor(
                         )
                     }
 
-                    // 전체 통계 계산
+                    // ✅ 평균 달성률 계산 (0~1 범위의 값들을 평균내고 100을 곱함)
+                    val validRates = habitsWithStats.mapNotNull { it.statistics?.completionRate }
+                    val averageRate = if (validRates.isNotEmpty()) {
+                        val avgValue = validRates.average().toFloat() * 100f  // ✅ 100 곱하기
+                        Log.d(TAG, "=== 평균 달성률 계산 ===")
+                        Log.d(TAG, "  유효한 달성률(0~1): $validRates")
+                        Log.d(TAG, "  평균(0~1): ${validRates.average()}")
+                        Log.d(TAG, "  평균(%): $avgValue%")
+                        avgValue
+                    } else {
+                        Log.d(TAG, "  평균 달성률: 데이터 없음")
+                        0f
+                    }
+
                     val totalChecks = habitsWithStats.sumOf { it.statistics?.totalChecks ?: 0 }
-                    val averageRate = if (habitsWithStats.isNotEmpty()) {
-                        habitsWithStats.mapNotNull { it.statistics?.completionRate }.average().toFloat()
-                    } else 0f
 
                     val longestStreak = habitsWithStats.maxOfOrNull {
                         it.statistics?.longestStreak ?: 0
@@ -88,7 +105,13 @@ class StatisticsViewModel @Inject constructor(
                         it.statistics?.thisMonthChecks ?: 0
                     }
 
-                    Log.d(TAG, "총 체크: $totalChecks, 이번 주: $thisWeekChecks, 이번 달: $thisMonthChecks")
+                    Log.d(TAG, "=== 최종 통계 ===")
+                    Log.d(TAG, "  총 체크: $totalChecks")
+                    Log.d(TAG, "  평균 달성률: $averageRate%")
+                    Log.d(TAG, "  최장 스트릭: $longestStreak 일")
+                    Log.d(TAG, "  현재 스트릭: $currentStreak 일")
+                    Log.d(TAG, "  이번 주 체크: $thisWeekChecks")
+                    Log.d(TAG, "  이번 달 체크: $thisMonthChecks")
 
                     _uiState.update {
                         it.copy(
@@ -97,7 +120,7 @@ class StatisticsViewModel @Inject constructor(
                             },
                             totalHabits = habitsWithStats.size,
                             totalChecks = totalChecks,
-                            averageCompletionRate = averageRate,
+                            averageCompletionRate = averageRate,  // ✅ 이미 % 단위
                             longestStreak = longestStreak,
                             currentStreak = currentStreak,
                             thisWeekChecks = thisWeekChecks,

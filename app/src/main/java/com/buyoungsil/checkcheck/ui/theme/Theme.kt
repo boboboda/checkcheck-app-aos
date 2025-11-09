@@ -5,113 +5,125 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
 
-/**
- * CheckCheck Light Theme
- * 진짜 MZ감성 - 엣지투엣지, 상태바 투명
- */
-private val LightColorScheme = lightColorScheme(
-    primary = CheckPrimary,
+// 🧡 Light Orange Theme
+private val LightOrangeColorScheme = lightColorScheme(
+    // Primary Colors
+    primary = OrangePrimary,
     onPrimary = Color.White,
-    primaryContainer = CheckPrimaryLight,
-    onPrimaryContainer = CheckPrimaryDark,
+    primaryContainer = OrangeLight,
+    onPrimaryContainer = OrangeDark,
 
-    secondary = CheckSecondary,
+    // Secondary Colors
+    secondary = OrangeSecondary,
     onSecondary = Color.White,
-    secondaryContainer = CheckSecondaryLight,
-    onSecondaryContainer = CheckSecondaryDark,
+    secondaryContainer = PeachAccent,
+    onSecondaryContainer = OrangeDark,
 
-    tertiary = CheckPurple,
+    // Tertiary Colors
+    tertiary = OrangeTertiary,
     onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFE9DBFF),
-    onTertiaryContainer = Color(0xFF7C4DFF),
+    tertiaryContainer = SunsetAccent,
+    onTertiaryContainer = OrangeDark,
 
-    error = CheckError,
+    // Error Colors
+    error = ErrorRed,
     onError = Color.White,
     errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFFBA1A1A),
+    onErrorContainer = Color(0xFF410002),
 
-    background = CheckBgPrimary,
-    onBackground = CheckGray900,
+    // Background Colors
+    background = OrangeBackground,
+    onBackground = TextPrimaryLight,
 
-    surface = CheckBgPrimary,
-    onSurface = CheckGray900,
-    surfaceVariant = CheckBgTertiary,
-    onSurfaceVariant = CheckGray700,
+    // Surface Colors
+    surface = OrangeSurface,
+    onSurface = TextPrimaryLight,
+    surfaceVariant = OrangeSurfaceVariant,
+    onSurfaceVariant = TextSecondaryLight,
 
-    outline = CheckGray300,
-    outlineVariant = CheckGray200,
+    // Outline
+    outline = DividerLight,
+    outlineVariant = Color(0xFFE0E0E0),
 
-    surfaceTint = CheckPrimary,
-
-    inverseSurface = CheckGray800,
-    inverseOnSurface = CheckGray50,
-    inversePrimary = CheckPrimaryLight,
-
-    scrim = Color.Black.copy(alpha = 0.32f)
+    // Other
+    scrim = Color.Black.copy(alpha = 0.32f),
+    inverseSurface = DarkSurface,
+    inverseOnSurface = TextPrimaryDark,
+    inversePrimary = DarkOrangePrimary,
 )
 
-/**
- * CheckCheck Dark Theme
- */
-private val DarkColorScheme = darkColorScheme(
-    primary = CheckPrimaryLight,
-    onPrimary = CheckPrimaryDark,
-    primaryContainer = CheckPrimaryDark,
-    onPrimaryContainer = CheckPrimaryLight,
+// 🌙 Dark Orange Theme
+private val DarkOrangeColorScheme = darkColorScheme(
+    // Primary Colors
+    primary = DarkOrangePrimary,
+    onPrimary = Color.White,
+    primaryContainer = OrangeDark,
+    onPrimaryContainer = OrangeLight,
 
-    secondary = CheckSecondaryLight,
-    onSecondary = CheckSecondaryDark,
-    secondaryContainer = CheckSecondaryDark,
-    onSecondaryContainer = CheckSecondaryLight,
+    // Secondary Colors
+    secondary = DarkOrangeSecondary,
+    onSecondary = TextPrimaryDark,
+    secondaryContainer = Color(0xFF4A3527),
+    onSecondaryContainer = PeachAccent,
 
-    tertiary = Color(0xFFD4B3FF),
-    onTertiary = Color(0xFF5E35B1),
-    tertiaryContainer = Color(0xFF7C4DFF),
-    onTertiaryContainer = Color(0xFFE9DBFF),
+    // Tertiary Colors
+    tertiary = OrangeTertiary,
+    onTertiary = TextPrimaryDark,
+    tertiaryContainer = Color(0xFF5A3D2F),
+    onTertiaryContainer = SunsetAccent,
 
-    error = Color(0xFFFFB4AB),
-    onError = Color(0xFF690005),
+    // Error Colors
+    error = ErrorRed,
+    onError = Color.White,
     errorContainer = Color(0xFF93000A),
     onErrorContainer = Color(0xFFFFDAD6),
 
-    background = CheckBgPrimaryDark,
-    onBackground = CheckGray100,
+    // Background Colors
+    background = DarkBackground,
+    onBackground = TextPrimaryDark,
 
-    surface = CheckBgPrimaryDark,
-    onSurface = CheckGray100,
-    surfaceVariant = CheckBgTertiaryDark,
-    onSurfaceVariant = CheckGray300,
+    // Surface Colors
+    surface = DarkSurface,
+    onSurface = TextPrimaryDark,
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = TextSecondaryDark,
 
-    outline = CheckGray600,
-    outlineVariant = CheckGray700,
+    // Outline
+    outline = DividerDark,
+    outlineVariant = Color(0xFF3D3D3D),
 
-    surfaceTint = CheckPrimaryLight,
-
-    inverseSurface = CheckGray100,
-    inverseOnSurface = CheckGray800,
-    inversePrimary = CheckPrimary,
-
-    scrim = Color.Black.copy(alpha = 0.32f)
+    // Other
+    scrim = Color.Black.copy(alpha = 0.5f),
+    inverseSurface = OrangeSurface,
+    inverseOnSurface = TextPrimaryLight,
+    inversePrimary = OrangePrimary,
 )
 
 @Composable
 fun CheckCheckTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false,
+    // Dynamic color is available on Android 12+
+    dynamicColor: Boolean = false, // 오렌지 테마 우선, Dynamic Color 비활성화
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val context = LocalContext.current
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+        darkTheme -> DarkOrangeColorScheme
+        else -> LightOrangeColorScheme
     }
 
     val view = LocalView.current
@@ -119,24 +131,82 @@ fun CheckCheckTheme(
         SideEffect {
             val window = (view.context as Activity).window
 
-            // ✨ 상태바 완전 투명 처리
-            window.statusBarColor = Color.Transparent.toArgb()
-            window.navigationBarColor = Color.Transparent.toArgb()
+            // 상태바 색상 설정
+            window.statusBarColor = if (darkTheme) {
+                DarkBackground.toArgb()
+            } else {
+                OrangeBackground.toArgb()
+            }
 
-            // ✨ 엣지 투 엣지 활성화
-            WindowCompat.setDecorFitsSystemWindows(window, false)
+            // 상태바 아이콘 색상 설정
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
 
-            // ✨ 상태바 아이콘 색상 (라이트 모드에서는 검은색)
-            val insetsController = WindowCompat.getInsetsController(window, view)
-            insetsController.isAppearanceLightStatusBars = !darkTheme
-            insetsController.isAppearanceLightNavigationBars = !darkTheme
+            // 네비게이션바 색상 설정
+            window.navigationBarColor = if (darkTheme) {
+                DarkSurface.toArgb()
+            } else {
+                OrangeSurface.toArgb()
+            }
+
+            // 네비게이션바 아이콘 색상 설정
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !darkTheme
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        shapes = Shapes,
+        shapes = CheckShapes,
         content = content
     )
+}
+
+// ===== 🎨 Theme Extensions =====
+
+/**
+ * 그룹 타입별 색상 가져오기
+ */
+fun getGroupTypeColor(type: String): Color {
+    return when (type.lowercase()) {
+        "family", "가족" -> FamilyOrange
+        "couple", "연인" -> CoupleRose
+        "study", "스터디" -> StudyBlue
+        "exercise", "운동" -> ExerciseGreen
+        "project", "프로젝트" -> ProjectPurple
+        else -> CustomYellow
+    }
+}
+
+/**
+ * 우선순위별 색상 가져오기
+ */
+fun getPriorityColor(priority: String): Color {
+    return when (priority.lowercase()) {
+        "urgent", "긴급" -> PriorityUrgent
+        "high", "높음" -> PriorityHigh
+        "medium", "보통" -> PriorityMedium
+        else -> PriorityLow
+    }
+}
+
+/**
+ * 스트릭별 색상 가져오기
+ */
+fun getStreakColor(days: Int): Color {
+    return when {
+        days >= 30 -> StreakDiamond
+        days >= 7 -> StreakGold
+        else -> StreakFire
+    }
+}
+
+/**
+ * 달성률별 색상 가져오기
+ */
+fun getCompletionColor(percentage: Float): Color {
+    return when {
+        percentage >= 80f -> SuccessOrange
+        percentage >= 50f -> WarningAmber
+        else -> ErrorRed
+    }
 }
