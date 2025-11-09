@@ -1,19 +1,31 @@
 package com.buyoungsil.checkcheck.feature.home
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.buyoungsil.checkcheck.core.ui.components.*
+import com.buyoungsil.checkcheck.feature.group.domain.model.Group
+import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
 import com.buyoungsil.checkcheck.ui.theme.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * 🧡 오렌지 테마 홈 화면
@@ -28,6 +40,7 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -62,216 +75,491 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            OrangeFAB(
+            FloatingActionButton(
                 onClick = { onNavigateToHabitCreate(null) },
-                icon = Icons.Default.Add,
-                contentDescription = "습관 추가"
-            )
+                containerColor = OrangePrimary,
+                contentColor = Color.White
+            ) {
+                Icon(Icons.Default.Add, "습관 추가")
+            }
         },
         containerColor = OrangeBackground
     ) { padding ->
-        when {
-            uiState.loading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = OrangePrimary)
-                }
-            }
-
-            uiState.error != null -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    EmptyState(
-                        icon = "😢",
-                        title = "오류가 발생했어요",
-                        subtitle = uiState.error,
-                        actionText = "다시 시도",
-                        onActionClick = { viewModel.loadData() }
-                    )
-                }
-            }
-
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentPadding = PaddingValues(
-                        top = 16.dp,
-                        bottom = 100.dp,
-                        start = 20.dp,
-                        end = 20.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
-                    // 오늘의 요약 카드
-                    item {
-                        TodaySummaryCard(
-                            completedCount = uiState.todayCompletedCount,
-                            totalCount = uiState.todayTotalCount,
-                            completionRate = uiState.todayCompletionRate
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            when {
+                uiState.isLoading -> {
+                    // 로딩
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = OrangePrimary
                         )
                     }
+                }
 
-                    // 내 습관 섹션
-                    item {
-                        SectionHeader(
-                            title = "📝 내 습관",
-                            actionText = if (uiState.personalHabits.isNotEmpty()) "전체보기" else null,
-                            onActionClick = if (uiState.personalHabits.isNotEmpty()) {
-                                { /* 습관 목록으로 이동 */ }
-                            } else null
+                uiState.error != null -> {
+                    // 에러
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "😢",
+                            fontSize = 48.sp
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = uiState.error ?: "오류가 발생했어요",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = TextSecondaryLight
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        OrangeGradientButton(
+                            text = "다시 시도",
+                            onClick = { viewModel.onRetry() }
                         )
                     }
+                }
 
-                    if (uiState.personalHabits.isEmpty()) {
+                else -> {
+                    // 메인 콘텐츠
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // 오늘의 진행률 카드
                         item {
-                            EmptyState(
-                                icon = "📭",
-                                title = "습관이 없어요",
-                                subtitle = "첫 번째 습관을 만들어보세요!",
-                                actionText = "습관 추가",
+                            TodayProgressCard(
+                                completedCount = uiState.todayCompletedCount,
+                                totalCount = uiState.todayTotalCount
+                            )
+                        }
+
+                        // 습관 섹션
+                        item {
+                            SectionHeader(
+                                title = "📝 내 습관",
+                                actionText = if (uiState.habits.isEmpty()) null else "추가",
                                 onActionClick = { onNavigateToHabitCreate(null) }
                             )
                         }
-                    } else {
-                        items(
-                            items = uiState.personalHabits,
-                            key = { it.id }
-                        ) { habit ->
-                            HabitCard(
-                                habitName = habit.name,
-                                isCompleted = habit.isCompletedToday,
-                                streak = habit.currentStreak,
-                                completionRate = habit.completionRate,
-                                habitIcon = habit.icon,
-                                onCheck = { viewModel.toggleHabitCompletion(habit.id) }
-                            )
-                        }
-                    }
 
-                    // 그룹 섹션
-                    if (uiState.groups.isNotEmpty()) {
-                        item {
-                            SectionHeader(
-                                title = "👥 내 그룹",
-                                actionText = "전체보기",
-                                onActionClick = onNavigateToGroupList
-                            )
+                        if (uiState.habits.isEmpty()) {
+                            item {
+                                EmptyStateCard(
+                                    icon = "📝",
+                                    message = "아직 습관이 없어요",
+                                    actionText = "습관 추가",
+                                    onActionClick = { onNavigateToHabitCreate(null) }
+                                )
+                            }
+                        } else {
+                            items(
+                                items = uiState.habits,
+                                key = { it.habit.id }
+                            ) { habitWithStats ->
+                                HabitItemCard(
+                                    habitWithStats = habitWithStats,
+                                    onCheck = { viewModel.onHabitCheck(habitWithStats.habit.id) },
+                                    onDelete = { showDeleteDialog = habitWithStats.habit.id }
+                                )
+                            }
                         }
 
-                        items(
-                            items = uiState.groups.take(3),
-                            key = { it.id }
-                        ) { group ->
-                            SimpleGroupCard(
-                                groupName = group.name,
-                                groupType = group.type,
-                                memberCount = group.memberIds.size,
-                                groupIcon = group.icon,
-                                onClick = { onNavigateToGroupDetail(group.id) }
-                            )
-                        }
-                    }
+                        // 그룹 섹션
+                        if (uiState.groups.isNotEmpty()) {
+                            item {
+                                SectionHeader(
+                                    title = "👥 내 그룹",
+                                    actionText = "전체보기",
+                                    onActionClick = onNavigateToGroupList
+                                )
+                            }
 
-                    // 오늘의 할일 섹션
-                    if (uiState.todayTasks.isNotEmpty()) {
-                        item {
-                            SectionHeader(
-                                title = "📋 오늘의 할일",
-                                actionText = "전체보기",
-                                onActionClick = { /* 할일 목록으로 이동 */ }
-                            )
-                        }
-
-                        items(
-                            items = uiState.todayTasks.take(5),
-                            key = { it.id }
-                        ) { task ->
-                            SimpleTaskCard(
-                                taskName = task.title,
-                                isCompleted = task.isCompleted,
-                                taskIcon = "📋",
-                                onCheck = { viewModel.toggleTaskCompletion(task.id) }
-                            )
+                            items(
+                                items = uiState.groups.take(3),
+                                key = { it.id }
+                            ) { group ->
+                                SimpleGroupCard(
+                                    group = group,
+                                    onClick = { onNavigateToGroupDetail(group.id) }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+
+    // 삭제 확인 다이얼로그
+    showDeleteDialog?.let { habitId ->
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            title = {
+                Text(
+                    "습관 삭제",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text("정말 이 습관을 삭제하시겠어요?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onDeleteHabit(habitId)
+                        showDeleteDialog = null
+                    }
+                ) {
+                    Text(
+                        "삭제",
+                        color = ErrorRed,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = null }) {
+                    Text("취소")
+                }
+            }
+        )
+    }
 }
 
 /**
- * 오늘의 요약 카드
+ * 오늘의 진행률 카드
  */
 @Composable
-private fun TodaySummaryCard(
+private fun TodayProgressCard(
     completedCount: Int,
-    totalCount: Int,
-    completionRate: Float
+    totalCount: Int
 ) {
+    val progress = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = ComponentShapes.StatCard,
         colors = CardDefaults.cardColors(
-            containerColor = androidx.compose.ui.graphics.Color.White
+            containerColor = Color.White
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "오늘의 진행상황",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimaryLight
-                    )
-                    Text(
-                        text = "화이팅! 조금만 더 힘내요 💪",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondaryLight
-                    )
-                }
-
                 Text(
-                    text = "${(completionRate * 100).toInt()}%",
-                    style = CustomTypography.numberLarge,
+                    text = "오늘의 목표",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = getCompletionColor(completionRate * 100)
+                    color = TextPrimaryLight
+                )
+                Text(
+                    text = "$completedCount / $totalCount",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = OrangePrimary
                 )
             }
 
-            LabeledProgressBar(
-                label = "$completedCount / $totalCount 완료",
-                progress = completionRate,
-                progressColor = getCompletionColor(completionRate * 100)
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+                    .clip(ComponentShapes.Chip),
+                color = OrangePrimary,
+                trackColor = DividerLight,
+            )
+
+            Text(
+                text = if (totalCount > 0) {
+                    when {
+                        progress >= 1f -> "🎉 완벽해요!"
+                        progress >= 0.8f -> "💪 거의 다 왔어요!"
+                        progress >= 0.5f -> "👍 절반 완료!"
+                        progress > 0f -> "🔥 시작이 좋아요!"
+                        else -> "시작해볼까요?"
+                    }
+                } else {
+                    "오늘 습관을 추가해보세요!"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondaryLight
             )
         }
     }
 }
 
 /**
- * 오늘 날짜 반환
+ * 섹션 헤더
+ */
+@Composable
+private fun SectionHeader(
+    title: String,
+    actionText: String? = null,
+    onActionClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimaryLight
+        )
+        if (actionText != null && onActionClick != null) {
+            TextButton(onClick = onActionClick) {
+                Text(
+                    text = actionText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = OrangePrimary
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 습관 아이템 카드
+ */
+@Composable
+private fun HabitItemCard(
+    habitWithStats: HabitWithStats,
+    onCheck: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val habit = habitWithStats.habit
+    val isChecked = habitWithStats.isCheckedToday
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onCheck),
+        shape = ComponentShapes.HabitCard,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isChecked) CheckedBackground else Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isChecked) 4.dp else 2.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 아이콘
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(ComponentShapes.IconBackground)
+                    .background(
+                        Brush.linearGradient(
+                            colors = if (isChecked) {
+                                listOf(OrangePrimary, OrangeSecondary)
+                            } else {
+                                listOf(OrangeSurfaceVariant, OrangeSurfaceVariant)
+                            }
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = habit.icon,
+                    fontSize = 24.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // 정보
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = habit.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryLight
+                )
+
+                habitWithStats.statistics?.let { stats ->
+                    Text(
+                        text = "🔥 ${stats.currentStreak}일 연속",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondaryLight
+                    )
+                }
+            }
+
+            // 체크 버튼
+            IconButton(
+                onClick = onCheck,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = if (isChecked) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                    contentDescription = if (isChecked) "완료" else "미완료",
+                    tint = if (isChecked) OrangePrimary else DividerLight,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 간단한 그룹 카드
+ */
+@Composable
+private fun SimpleGroupCard(
+    group: Group,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = ComponentShapes.GroupCard,
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 아이콘
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(ComponentShapes.IconBackground)
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                getGroupTypeColor(group.type.name.lowercase()),
+                                getGroupTypeColor(group.type.name.lowercase()).copy(alpha = 0.7f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = group.icon,
+                    fontSize = 24.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // 정보
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = group.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryLight
+                )
+                Text(
+                    text = "👥 ${group.memberIds.size}명",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondaryLight
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = TextSecondaryLight
+            )
+        }
+    }
+}
+
+/**
+ * 빈 상태 카드
+ */
+@Composable
+private fun EmptyStateCard(
+    icon: String,
+    message: String,
+    actionText: String,
+    onActionClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = ComponentShapes.HabitCard,
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = icon,
+                fontSize = 48.sp
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = TextSecondaryLight
+            )
+            Button(
+                onClick = onActionClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = OrangePrimary
+                ),
+                shape = ComponentShapes.PrimaryButton
+            ) {
+                Text(
+                    text = actionText,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 오늘 날짜 포맷
  */
 private fun getTodayDate(): String {
-    val today = java.time.LocalDate.now()
-    val formatter = java.time.format.DateTimeFormatter.ofPattern("M월 d일 EEEE", java.util.Locale.KOREAN)
-    return today.format(formatter)
+    val formatter = DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN)
+    return LocalDate.now().format(formatter)
 }

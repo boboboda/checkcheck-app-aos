@@ -34,13 +34,10 @@ fun GroupDetailScreen(
                 title = {
                     Column {
                         Text(uiState.group?.name ?: "그룹")
-                        if (uiState.todayTotalCount > 0) {
-                            Text(
-                                text = "오늘 ${uiState.todayCompletedCount}/${uiState.todayTotalCount} 완료",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                        Text(
+                            text = "오늘 ${uiState.todayCompletedCount}/${uiState.todayTotalCount} 완료",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 },
                 navigationIcon = {
@@ -51,24 +48,12 @@ fun GroupDetailScreen(
             )
         },
         floatingActionButton = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            FloatingActionButton(
+                onClick = {
+                    uiState.group?.let { onNavigateToHabitCreate(it.id) }
+                }
             ) {
-                FloatingActionButton(
-                    onClick = {
-                        viewModel.uiState.value.group?.id.let {
-                            if(it != null) {onNavigateToHabitCreate(it)}
-                        }
-                    },
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ) {
-                    Text("📌", style = MaterialTheme.typography.headlineSmall)
-                }
-                FloatingActionButton(
-                    onClick = onNavigateToTaskCreate
-                ) {
-                    Icon(Icons.Default.Add, "할일 추가")
-                }
+                Icon(Icons.Default.Add, "추가")
             }
         }
     ) { padding ->
@@ -149,9 +134,12 @@ fun GroupDetailScreen(
                         } else {
                             items(uiState.sharedHabits) { habitWithStats ->
                                 HabitCard(
-                                    habitWithStats = habitWithStats,
-                                    onCheck = { viewModel.onHabitCheck(habitWithStats.habit.id) },
-                                    onDelete = { }
+                                    habitName = habitWithStats.habit.title,
+                                    isCompleted = habitWithStats.isCheckedToday,
+                                    streak = habitWithStats.statistics?.currentStreak ?: 0,
+                                    completionRate = habitWithStats.statistics?.completionRate ?: 0f,
+                                    habitIcon = habitWithStats.habit.icon,
+                                    onCheck = { viewModel.onHabitCheck(habitWithStats.habit.id) }
                                 )
                             }
                         }
@@ -192,9 +180,12 @@ fun GroupDetailScreen(
                         } else {
                             items(uiState.tasks) { task ->
                                 TaskCard(
-                                    task = task,
-                                    onComplete = { viewModel.onCompleteTask(task.id) },
-                                    onDelete = { viewModel.onDeleteTask(task.id) }
+                                    taskName = task.title,
+                                    isCompleted = task.isCompleted,
+                                    priority = task.priority.name.lowercase(),
+                                    dueDate = task.deadline,
+                                    assignee = task.assignedTo,
+                                    onCheck = { viewModel.onCompleteTask(task.id) }
                                 )
                             }
                         }

@@ -14,19 +14,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.People
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -45,6 +42,10 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        private const val TAG = "MainActivity"
+    }
 
     @Inject
     lateinit var authManager: FirebaseAuthManager
@@ -95,18 +96,10 @@ class MainActivity : ComponentActivity() {
                 val authState by authManager.authStateFlow()
                     .collectAsState(initial = authManager.currentUser)
 
-                // 🧡 따뜻한 오렌지 그라데이션 배경
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    CheckBgGradientStart,  // #FFF5F0
-                                    CheckBgGradientEnd     // #FFEBE0
-                                )
-                            )
-                        )
+                        .background(OrangeBackground)
                 ) {
                     if (authState == null) {
                         // 로딩 화면
@@ -114,31 +107,21 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                CircularProgressIndicator(color = CheckPrimary)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text("로그인 중...", color = CheckPrimary)
-                            }
+                            CircularProgressIndicator(
+                                color = OrangePrimary
+                            )
                         }
                     } else {
+                        // 메인 화면
                         Scaffold(
-                            containerColor = Color.Transparent,
                             bottomBar = {
-                                val shouldShowBottomBar = currentRoute in listOf(
-                                    Screen.Home.route,
-                                    Screen.GroupList.route,
-                                    Screen.Statistics.route
-                                )
-
-                                if (shouldShowBottomBar) {
-                                    WarmBottomNavigation(
+                                if (shouldShowBottomBar(currentRoute)) {
+                                    BottomNavigationBar(
                                         currentRoute = currentRoute,
                                         onNavigate = { route ->
                                             navController.navigate(route) {
                                                 popUpTo(Screen.Home.route) {
-                                                    inclusive = (route == Screen.Home.route)
+                                                    saveState = true
                                                 }
                                                 launchSingleTop = true
                                                 restoreState = true
@@ -146,7 +129,8 @@ class MainActivity : ComponentActivity() {
                                         }
                                     )
                                 }
-                            }
+                            },
+                            containerColor = OrangeBackground
                         ) { padding ->
                             NavGraph(
                                 navController = navController,
@@ -157,6 +141,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun shouldShowBottomBar(currentRoute: String?): Boolean {
+        return when (currentRoute) {
+            Screen.Home.route,
+            Screen.GroupList.route,
+            Screen.Statistics.route -> true
+            else -> false
         }
     }
 
@@ -193,125 +186,96 @@ class MainActivity : ComponentActivity() {
                 if (task.isSuccessful) {
                     val token = task.result
                     Log.d(TAG, "✅ FCM 토큰 생성 성공!")
-                    Log.d(TAG, "🔑 토큰: $token")
+                    Log.d(TAG, "토큰: $token")
 
                     lifecycleScope.launch {
                         try {
                             updateFcmTokenUseCase(userId, token)
-                            Log.d(TAG, "✅ FCM 토큰 Firestore 저장 완료")
+                            Log.d(TAG, "✅ FCM 토큰 Firestore 저장 성공")
                         } catch (e: Exception) {
-                            Log.e(TAG, "❌ FCM 토큰 저장 실패", e)
+                            Log.e(TAG, "❌ FCM 토큰 저장 실패: ${e.message}", e)
                         }
                     }
                 } else {
                     Log.e(TAG, "❌ FCM 토큰 생성 실패", task.exception)
-                    Log.e(TAG, "   에러 메시지: ${task.exception?.message}")
                 }
             }
-    }
-
-    companion object {
-        private const val TAG = "MainActivity"
     }
 }
 
 /**
- * 🧡 따뜻한 오렌지 바텀 네비게이션
+ * 🧡 오렌지 테마 하단 네비게이션 바
  */
 @Composable
-private fun WarmBottomNavigation(
+private fun BottomNavigationBar(
     currentRoute: String?,
     onNavigate: (String) -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
-        tonalElevation = 8.dp,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(
-            topStart = 20.dp,
-            topEnd = 20.dp
-        )
+    NavigationBar(
+        containerColor = Color.White,
+        contentColor = OrangePrimary,
+        tonalElevation = 8.dp
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .height(64.dp)
-                .padding(horizontal = 24.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            WarmNavItem(
-                icon = if (currentRoute == Screen.Home.route) Icons.Filled.Home else Icons.Outlined.Home,
-                label = "홈",
-                selected = currentRoute == Screen.Home.route,
-                onClick = {
-                    if (currentRoute != Screen.Home.route) {
-                        onNavigate(Screen.Home.route)
-                    }
-                }
-            )
+        NavigationItem(
+            icon = Icons.Outlined.Home,
+            selectedIcon = Icons.Filled.Home,
+            label = "홈",
+            selected = currentRoute == Screen.Home.route,
+            onClick = { onNavigate(Screen.Home.route) }
+        )
 
-            WarmNavItem(
-                icon = if (currentRoute == Screen.GroupList.route) Icons.Filled.People else Icons.Outlined.People,
-                label = "그룹",
-                selected = currentRoute == Screen.GroupList.route,
-                onClick = {
-                    if (currentRoute != Screen.GroupList.route) {
-                        onNavigate(Screen.GroupList.route)
-                    }
-                }
-            )
+        NavigationItem(
+            icon = Icons.Outlined.People,
+            selectedIcon = Icons.Filled.People,
+            label = "그룹",
+            selected = currentRoute == Screen.GroupList.route,
+            onClick = { onNavigate(Screen.GroupList.route) }
+        )
 
-            WarmNavItem(
-                icon = if (currentRoute == Screen.Statistics.route) Icons.Filled.BarChart else Icons.Outlined.BarChart,
-                label = "통계",
-                selected = currentRoute == Screen.Statistics.route,
-                onClick = {
-                    if (currentRoute != Screen.Statistics.route) {
-                        onNavigate(Screen.Statistics.route)
-                    }
-                }
-            )
-        }
+        NavigationItem(
+            icon = Icons.Outlined.BarChart,
+            selectedIcon = Icons.Filled.BarChart,
+            label = "통계",
+            selected = currentRoute == Screen.Statistics.route,
+            onClick = { onNavigate(Screen.Statistics.route) }
+        )
     }
 }
 
+/**
+ * 네비게이션 아이템
+ */
 @Composable
-private fun WarmNavItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+private fun RowScope.NavigationItem(
+    icon: ImageVector,
+    selectedIcon: ImageVector,
     label: String,
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .clip(CircleShape)
-            .background(
-                if (selected) CheckPrimary.copy(alpha = 0.1f)
-                else Color.Transparent
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+    NavigationBarItem(
+        icon = {
             Icon(
-                imageVector = icon,
+                imageVector = if (selected) selectedIcon else icon,
                 contentDescription = label,
-                tint = if (selected) CheckPrimary else CheckGray500,
                 modifier = Modifier.size(26.dp)
             )
+        },
+        label = {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (selected) CheckPrimary else CheckGray500,
-                fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold
-                else androidx.compose.ui.text.font.FontWeight.Normal
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
             )
-        }
-    }
+        },
+        selected = selected,
+        onClick = onClick,
+        colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = OrangePrimary,
+            selectedTextColor = OrangePrimary,
+            unselectedIconColor = TextSecondaryLight,
+            unselectedTextColor = TextSecondaryLight,
+            indicatorColor = OrangePrimary.copy(alpha = 0.1f)
+        )
+    )
 }

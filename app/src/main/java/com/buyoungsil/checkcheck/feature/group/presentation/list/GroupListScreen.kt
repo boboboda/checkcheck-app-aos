@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExitToApp
@@ -20,12 +19,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.buyoungsil.checkcheck.core.ui.components.*
 import com.buyoungsil.checkcheck.feature.group.domain.model.Group
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
- * 💜 보라 테마 그룹 목록 화면
+ * 🧡 그룹 목록 화면 - 오렌지 테마
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,10 +47,13 @@ fun GroupListScreen(
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
+                    containerColor = OrangeBackground,
+                    titleContentColor = TextPrimaryLight,
+                    navigationIconContentColor = TextPrimaryLight
                 )
             )
         },
+        containerColor = OrangeBackground,
         floatingActionButton = {
             Column(
                 horizontalAlignment = Alignment.End,
@@ -61,7 +62,7 @@ fun GroupListScreen(
                 // 그룹 참여 버튼
                 SmallFloatingActionButton(
                     onClick = onNavigateToJoin,
-                    containerColor = PurplePrimaryLight,
+                    containerColor = OrangeSecondary,
                     contentColor = Color.White
                 ) {
                     Text(
@@ -74,7 +75,7 @@ fun GroupListScreen(
                 // 그룹 만들기 버튼
                 FloatingActionButton(
                     onClick = onNavigateToCreate,
-                    containerColor = PurplePrimary,
+                    containerColor = OrangePrimary,
                     contentColor = Color.White
                 ) {
                     Icon(Icons.Default.Add, "그룹 만들기")
@@ -85,14 +86,6 @@ fun GroupListScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            PurpleBackground,
-                            PurpleSurface
-                        )
-                    )
-                )
                 .padding(padding)
         ) {
             when {
@@ -103,7 +96,7 @@ fun GroupListScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
-                            color = PurplePrimary
+                            color = OrangePrimary
                         )
                     }
                 }
@@ -128,10 +121,14 @@ fun GroupListScreen(
                             color = TextSecondaryLight
                         )
                         Spacer(modifier = Modifier.height(24.dp))
-                        GlassButton(
-                            text = "다시 시도",
-                            onClick = { viewModel.onRetry() }
-                        )
+                        Button(
+                            onClick = { viewModel.onRetry() },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = OrangePrimary
+                            )
+                        ) {
+                            Text("다시 시도")
+                        }
                     }
                 }
 
@@ -168,7 +165,7 @@ fun GroupListScreen(
                     // 그룹 목록
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(
@@ -209,7 +206,7 @@ fun GroupListScreen(
                 ) {
                     Text(
                         "나가기",
-                        color = MaterialTheme.colorScheme.error,
+                        color = ErrorRed,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -224,7 +221,7 @@ fun GroupListScreen(
 }
 
 /**
- * 그룹 카드
+ * 그룹 카드 - 다른 화면들과 동일한 스타일
  */
 @Composable
 private fun GroupCard(
@@ -232,22 +229,29 @@ private fun GroupCard(
     onClick: () -> Unit,
     onLeaveClick: () -> Unit
 ) {
-    GlassCard(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
+        shape = ComponentShapes.GroupCard,
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 아이콘
             Box(
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(CircleShape)
+                    .clip(ComponentShapes.IconBackground)
                     .background(
                         Brush.linearGradient(
                             colors = listOf(
@@ -276,7 +280,7 @@ private fun GroupCard(
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryLight
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
