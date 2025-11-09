@@ -9,49 +9,38 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.buyoungsil.checkcheck.core.ui.components.*
+import com.buyoungsil.checkcheck.feature.group.domain.model.GroupType
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
- * 🧡 오렌지 테마 그룹 생성 화면
+ * 🧡 그룹 생성 화면 - 실제 ViewModel에 정확히 맞춤
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateGroupScreen(
-    onNavigateBack: () -> Unit,
-    onCreateGroup: (String, String, String) -> Unit
+    viewModel: CreateGroupViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit
 ) {
-    var groupName by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf("family") }
-    var selectedIcon by remember { mutableStateOf("👨‍👩‍👧‍👦") }
+    val uiState by viewModel.uiState.collectAsState()
 
-    val groupTypes = listOf(
-        "family" to "가족",
-        "couple" to "연인",
-        "study" to "스터디",
-        "exercise" to "운동",
-        "project" to "프로젝트",
-        "custom" to "커스텀"
-    )
-
-    val iconsByType = mapOf(
-        "family" to listOf("👨‍👩‍👧‍👦", "👪", "🏠", "❤️", "🤗"),
-        "couple" to listOf("💑", "❤️", "💕", "💖", "💝"),
-        "study" to listOf("📚", "📖", "✏️", "🎓", "📝"),
-        "exercise" to listOf("🏃", "💪", "🏋️", "🚴", "⚽"),
-        "project" to listOf("💼", "📋", "🎯", "⚡", "🚀"),
-        "custom" to listOf("🎯", "⭐", "🌟", "✨", "🎨")
-    )
+    // isSuccess가 true가 되면 뒤로가기
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            onNavigateBack()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -89,8 +78,14 @@ fun CreateGroupScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // 그룹명 입력
-            GlassCard {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = ComponentShapes.GroupCard,
+                colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
                 Column(
+                    modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
@@ -100,18 +95,32 @@ fun CreateGroupScreen(
                         color = TextPrimaryLight
                     )
 
-                    GlassTextField(
-                        value = groupName,
-                        onValueChange = { groupName = it },
-                        placeholder = "예: 우리 가족, 스터디 그룹...",
-                        singleLine = true
+                    OutlinedTextField(
+                        value = uiState.name,
+                        onValueChange = { viewModel.onNameChange(it) },
+                        placeholder = { Text("예: 우리 가족, 스터디 그룹...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = ComponentShapes.TextField,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = OrangePrimary,
+                            unfocusedBorderColor = DividerLight,
+                            cursorColor = OrangePrimary,
+                        ),
+                        isError = uiState.error != null && uiState.name.isBlank()
                     )
                 }
             }
 
             // 그룹 타입 선택
-            GlassCard {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = ComponentShapes.GroupCard,
+                colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
                 Column(
+                    modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
@@ -124,43 +133,11 @@ fun CreateGroupScreen(
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(groupTypes) { (type, label) ->
+                        items(GroupType.entries) { type ->
                             TypeChip(
-                                label = label,
                                 type = type,
-                                isSelected = selectedType == type,
-                                onClick = {
-                                    selectedType = type
-                                    // 타입 변경 시 기본 아이콘으로 변경
-                                    selectedIcon = iconsByType[type]?.firstOrNull() ?: "🎯"
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 아이콘 선택
-            GlassCard {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "그룹 아이콘",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimaryLight
-                    )
-
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(iconsByType[selectedType] ?: emptyList()) { icon ->
-                            IconChip(
-                                icon = icon,
-                                isSelected = selectedIcon == icon,
-                                color = getGroupTypeColor(selectedType),
-                                onClick = { selectedIcon = icon }
+                                isSelected = uiState.type == type,
+                                onClick = { viewModel.onTypeChange(type) }
                             )
                         }
                     }
@@ -168,8 +145,14 @@ fun CreateGroupScreen(
             }
 
             // 미리보기
-            GlassCard {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = ComponentShapes.GroupCard,
+                colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
                 Column(
+                    modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
@@ -184,7 +167,7 @@ fun CreateGroupScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = ComponentShapes.GroupCard,
                         colors = CardDefaults.cardColors(
-                            containerColor = Color.White
+                            containerColor = OrangeSurfaceVariant
                         ),
                         elevation = CardDefaults.cardElevation(
                             defaultElevation = 4.dp
@@ -197,7 +180,6 @@ fun CreateGroupScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // 아이콘 배경
                             Box(
                                 modifier = Modifier
                                     .size(56.dp)
@@ -205,36 +187,36 @@ fun CreateGroupScreen(
                                     .background(
                                         Brush.linearGradient(
                                             colors = listOf(
-                                                getGroupTypeColor(selectedType).copy(alpha = 0.8f),
-                                                getGroupTypeColor(selectedType)
+                                                getGroupTypeColor(uiState.type.name.lowercase()).copy(alpha = 0.8f),
+                                                getGroupTypeColor(uiState.type.name.lowercase())
                                             )
                                         )
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = selectedIcon,
+                                    text = uiState.icon,
                                     fontSize = 28.sp
                                 )
                             }
 
                             Column {
                                 Text(
-                                    text = groupName.ifEmpty { "그룹 이름" },
+                                    text = uiState.name.ifEmpty { "그룹 이름" },
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (groupName.isEmpty()) TextTertiaryLight else TextPrimaryLight
+                                    color = if (uiState.name.isEmpty()) TextTertiaryLight else TextPrimaryLight
                                 )
 
                                 Surface(
                                     shape = ComponentShapes.Badge,
-                                    color = getGroupTypeColor(selectedType).copy(alpha = 0.15f)
+                                    color = getGroupTypeColor(uiState.type.name.lowercase()).copy(alpha = 0.15f)
                                 ) {
                                     Text(
-                                        text = groupTypes.find { it.first == selectedType }?.second ?: "",
+                                        text = uiState.type.displayName,
                                         style = CustomTypography.chip,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = getGroupTypeColor(selectedType),
+                                        color = getGroupTypeColor(uiState.type.name.lowercase()),
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                     )
                                 }
@@ -244,17 +226,31 @@ fun CreateGroupScreen(
                 }
             }
 
+            // 에러 메시지
+            if (uiState.error != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = ComponentShapes.GroupCard,
+                    colors = CardDefaults.cardColors(containerColor = ErrorRed.copy(alpha = 0.1f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Text(
+                        text = uiState.error!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ErrorRed,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.weight(1f))
 
             // 생성 버튼
-            GlassButton(
-                text = "그룹 만들기",
-                onClick = {
-                    if (groupName.isNotBlank()) {
-                        onCreateGroup(groupName, selectedType, selectedIcon)
-                    }
-                },
-                enabled = groupName.isNotBlank()
+            OrangeGradientButton(
+                text = if (uiState.isLoading) "생성 중..." else "그룹 만들기",
+                onClick = { viewModel.onCreateGroup() },
+                enabled = !uiState.isLoading && uiState.name.isNotBlank(),
+                icon = Icons.Default.Add
             )
         }
     }
@@ -265,12 +261,11 @@ fun CreateGroupScreen(
  */
 @Composable
 private fun TypeChip(
-    label: String,
-    type: String,
+    type: GroupType,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val color = getGroupTypeColor(type)
+    val color = getGroupTypeColor(type.name.lowercase())
 
     Surface(
         modifier = Modifier.clickable(onClick = onClick),
@@ -284,53 +279,21 @@ private fun TypeChip(
             androidx.compose.foundation.BorderStroke(2.dp, color)
         } else null
     ) {
-        Text(
-            text = label,
-            style = CustomTypography.chip,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) color else TextSecondaryLight,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-        )
-    }
-}
-
-/**
- * 아이콘 칩
- */
-@Composable
-private fun IconChip(
-    icon: String,
-    isSelected: Boolean,
-    color: Color,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .clip(ComponentShapes.IconBackground)
-            .background(
-                if (isSelected) {
-                    Brush.linearGradient(
-                        colors = listOf(
-                            color.copy(alpha = 0.8f),
-                            color
-                        )
-                    )
-                } else {
-                    Brush.linearGradient(
-                        colors = listOf(
-                            OrangeSurfaceVariant,
-                            OrangeSurfaceVariant
-                        )
-                    )
-                }
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = type.icon,
+                fontSize = 16.sp
             )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = icon,
-            fontSize = 28.sp
-        )
+            Text(
+                text = type.displayName,
+                style = CustomTypography.chip,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) color else TextSecondaryLight
+            )
+        }
     }
 }

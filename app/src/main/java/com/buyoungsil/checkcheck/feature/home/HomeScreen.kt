@@ -1,376 +1,277 @@
 package com.buyoungsil.checkcheck.feature.home
 
-import android.os.Build
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.buyoungsil.checkcheck.core.notification.rememberNotificationPermissionState
-import com.buyoungsil.checkcheck.core.ui.components.GlassCard
-import com.buyoungsil.checkcheck.core.ui.components.GlassIconBackground
-import com.buyoungsil.checkcheck.core.ui.components.GlassProgressBar
-import com.buyoungsil.checkcheck.feature.group.presentation.list.GlassGroupCard
-import com.buyoungsil.checkcheck.feature.habit.presentation.list.GlassHabitCard
+import com.buyoungsil.checkcheck.core.ui.components.*
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
- * 🔥 Glassmorphism 홈 화면
+ * 🧡 오렌지 테마 홈 화면
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
-    onNavigateToHabitCreate: () -> Unit,
+    onNavigateToHabitCreate: (String?) -> Unit,
     onNavigateToGroupList: () -> Unit,
     onNavigateToGroupDetail: (String) -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val permissionState = rememberNotificationPermissionState()
-
-    var habitToDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
-    var groupToLeave by remember { mutableStateOf<Pair<String, String>?>(null) }
-
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (!permissionState.hasPermission) {
-                permissionState.requestPermission()
-            }
-        }
-    }
 
     Scaffold(
-        containerColor = Color.Transparent,
         topBar = {
-            // 🔥 글라스 탑바
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = GlassWhite15,
-                tonalElevation = 0.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "체크체크",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
-                    )
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text = "체크체크",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = getTodayDate(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondaryLight
+                        )
+                    }
+                },
+                actions = {
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
                             Icons.Default.Settings,
                             contentDescription = "설정",
-                            tint = Color.White
+                            tint = TextPrimaryLight
                         )
                     }
-                }
-            }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = OrangeBackground,
+                    titleContentColor = TextPrimaryLight
+                )
+            )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToHabitCreate,
-                containerColor = GlassWhite25,
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "습관 추가")
-            }
-        }
+            OrangeFAB(
+                onClick = { onNavigateToHabitCreate(null) },
+                icon = Icons.Default.Add,
+                contentDescription = "습관 추가"
+            )
+        },
+        containerColor = OrangeBackground
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            // 오늘 현황 카드
-            item {
-                GlassCard(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+        when {
+            uiState.loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
                 ) {
-                    val totalHabits = uiState.habits.size
-                    val completedHabits = uiState.habits.count { it.isCheckedToday }
-                    val progress = if (totalHabits > 0) completedHabits.toFloat() / totalHabits else 0f
-                    val animatedProgress by animateFloatAsState(
-                        targetValue = progress,
-                        animationSpec = tween(durationMillis = 800), label = ""
+                    CircularProgressIndicator(color = OrangePrimary)
+                }
+            }
+
+            uiState.error != null -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    EmptyState(
+                        icon = "😢",
+                        title = "오류가 발생했어요",
+                        subtitle = uiState.error,
+                        actionText = "다시 시도",
+                        onActionClick = { viewModel.loadData() }
                     )
+                }
+            }
 
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "오늘의 습관",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "$completedHabits / $totalHabits 완료",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White.copy(alpha = 0.9f)
-                            )
-                            Text(
-                                text = "${(animatedProgress * 100).toInt()}%",
-                                style = MaterialTheme.typography.displayMedium,
-                                fontWeight = FontWeight.Black,
-                                color = Color.White
-                            )
-                        }
-
-                        GlassProgressBar(progress = animatedProgress)
-
-                        Text(
-                            text = when {
-                                progress >= 1f -> "🎉 완벽해요! 최고예요!"
-                                progress >= 0.8f -> "💪 거의 다 왔어요!"
-                                progress >= 0.5f -> "🔥 절반 넘었네요!"
-                                else -> "✨ 화이팅!"
-                            },
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+            else -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentPadding = PaddingValues(
+                        top = 16.dp,
+                        bottom = 100.dp,
+                        start = 20.dp,
+                        end = 20.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    // 오늘의 요약 카드
+                    item {
+                        TodaySummaryCard(
+                            completedCount = uiState.todayCompletedCount,
+                            totalCount = uiState.todayTotalCount,
+                            completionRate = uiState.todayCompletionRate
                         )
                     }
-                }
-            }
 
-            // 내 습관 섹션
-            item {
-                GlassSectionHeader(
-                    title = "내 습관",
-                    count = uiState.habits.size,
-                    emoji = "📱",
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-            }
+                    // 내 습관 섹션
+                    item {
+                        SectionHeader(
+                            title = "📝 내 습관",
+                            actionText = if (uiState.personalHabits.isNotEmpty()) "전체보기" else null,
+                            onActionClick = if (uiState.personalHabits.isNotEmpty()) {
+                                { /* 습관 목록으로 이동 */ }
+                            } else null
+                        )
+                    }
 
-            if (uiState.habits.isEmpty()) {
-                item {
-                    GlassCard(
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "아직 습관이 없어요",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White
+                    if (uiState.personalHabits.isEmpty()) {
+                        item {
+                            EmptyState(
+                                icon = "📭",
+                                title = "습관이 없어요",
+                                subtitle = "첫 번째 습관을 만들어보세요!",
+                                actionText = "습관 추가",
+                                onActionClick = { onNavigateToHabitCreate(null) }
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "+ 버튼을 눌러 습관을 추가하세요!",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.7f)
+                        }
+                    } else {
+                        items(
+                            items = uiState.personalHabits,
+                            key = { it.id }
+                        ) { habit ->
+                            HabitCard(
+                                habitName = habit.name,
+                                isCompleted = habit.isCompletedToday,
+                                streak = habit.currentStreak,
+                                completionRate = habit.completionRate,
+                                habitIcon = habit.icon,
+                                onCheck = { viewModel.toggleHabitCompletion(habit.id) }
                             )
                         }
                     }
-                }
-            } else {
-                items(
-                    items = uiState.habits,
-                    key = { it.habit.id }
-                ) { habitWithStats ->
-                    GlassHabitCard(
-                        habitWithStats = habitWithStats,
-                        onCheck = { viewModel.onHabitCheck(habitWithStats.habit.id) },
-                        onDelete = {
-                            habitToDelete = habitWithStats.habit.id to habitWithStats.habit.title
-                        },
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    )
-                }
-            }
 
-            // 내 그룹 섹션
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                GlassSectionHeader(
-                    title = "내 그룹",
-                    count = uiState.groups.size,
-                    emoji = "👥",
-                    actionText = "전체보기",
-                    onActionClick = onNavigateToGroupList,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-            }
-
-            if (uiState.groups.isEmpty()) {
-                item {
-                    GlassCard(
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "아직 그룹이 없어요",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White
+                    // 그룹 섹션
+                    if (uiState.groups.isNotEmpty()) {
+                        item {
+                            SectionHeader(
+                                title = "👥 내 그룹",
+                                actionText = "전체보기",
+                                onActionClick = onNavigateToGroupList
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "그룹을 생성하거나 초대코드로 참여하세요!",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.7f)
+                        }
+
+                        items(
+                            items = uiState.groups.take(3),
+                            key = { it.id }
+                        ) { group ->
+                            SimpleGroupCard(
+                                groupName = group.name,
+                                groupType = group.type,
+                                memberCount = group.memberIds.size,
+                                groupIcon = group.icon,
+                                onClick = { onNavigateToGroupDetail(group.id) }
                             )
                         }
                     }
-                }
-            } else {
-                items(
-                    items = uiState.groups.take(3),
-                    key = { it.id }
-                ) { group ->
-                    GlassGroupCard(
-                        group = group,
-                        onClick = { onNavigateToGroupDetail(group.id) },
-                        onLeave = {
-                            groupToLeave = group.id to group.name
-                        },
-                        modifier = Modifier.padding(horizontal = 20.dp)
-                    )
+
+                    // 오늘의 할일 섹션
+                    if (uiState.todayTasks.isNotEmpty()) {
+                        item {
+                            SectionHeader(
+                                title = "📋 오늘의 할일",
+                                actionText = "전체보기",
+                                onActionClick = { /* 할일 목록으로 이동 */ }
+                            )
+                        }
+
+                        items(
+                            items = uiState.todayTasks.take(5),
+                            key = { it.id }
+                        ) { task ->
+                            SimpleTaskCard(
+                                taskName = task.title,
+                                isCompleted = task.isCompleted,
+                                taskIcon = "📋",
+                                onCheck = { viewModel.toggleTaskCompletion(task.id) }
+                            )
+                        }
+                    }
                 }
             }
         }
-    }
-
-    // 습관 삭제 다이얼로그
-    habitToDelete?.let { (habitId, habitTitle) ->
-        AlertDialog(
-            onDismissRequest = { habitToDelete = null },
-            title = { Text("습관 삭제", color = Color.White) },
-            text = { Text("'$habitTitle' 습관을 삭제하시겠습니까?", color = Color.White) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.onDeleteHabit(habitId)
-                        habitToDelete = null
-                    }
-                ) {
-                    Text("삭제", color = CheckError)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { habitToDelete = null }) {
-                    Text("취소", color = Color.White)
-                }
-            },
-            containerColor = GlassWhite20
-        )
-    }
-
-    // 그룹 나가기 다이얼로그
-    groupToLeave?.let { (groupId, groupName) ->
-        AlertDialog(
-            onDismissRequest = { groupToLeave = null },
-            title = { Text("그룹 나가기", color = Color.White) },
-            text = { Text("'$groupName' 그룹에서 나가시겠습니까?", color = Color.White) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.onLeaveGroup(groupId)
-                        groupToLeave = null
-                    }
-                ) {
-                    Text("나가기", color = CheckError)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { groupToLeave = null }) {
-                    Text("취소", color = Color.White)
-                }
-            },
-            containerColor = GlassWhite20
-        )
     }
 }
 
 /**
- * 🔥 글라스 섹션 헤더
+ * 오늘의 요약 카드
  */
 @Composable
-private fun GlassSectionHeader(
-    title: String,
-    count: Int,
-    emoji: String,
-    modifier: Modifier = Modifier,
-    actionText: String? = null,
-    onActionClick: (() -> Unit)? = null
+private fun TodaySummaryCard(
+    completedCount: Int,
+    totalCount: Int,
+    completionRate: Float
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = ComponentShapes.StatCard,
+        colors = CardDefaults.cardColors(
+            containerColor = androidx.compose.ui.graphics.Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = emoji,
-                fontSize = 28.sp
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Black,
-                color = Color.White
-            )
-            Surface(
-                shape = CircleShape,
-                color = GlassWhite25
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = count.toString(),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                )
-            }
-        }
+                Column {
+                    Text(
+                        text = "오늘의 진행상황",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryLight
+                    )
+                    Text(
+                        text = "화이팅! 조금만 더 힘내요 💪",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondaryLight
+                    )
+                }
 
-        if (actionText != null && onActionClick != null) {
-            TextButton(onClick = onActionClick) {
                 Text(
-                    text = actionText,
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold
+                    text = "${(completionRate * 100).toInt()}%",
+                    style = CustomTypography.numberLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = getCompletionColor(completionRate * 100)
                 )
             }
+
+            LabeledProgressBar(
+                label = "$completedCount / $totalCount 완료",
+                progress = completionRate,
+                progressColor = getCompletionColor(completionRate * 100)
+            )
         }
     }
+}
+
+/**
+ * 오늘 날짜 반환
+ */
+private fun getTodayDate(): String {
+    val today = java.time.LocalDate.now()
+    val formatter = java.time.format.DateTimeFormatter.ofPattern("M월 d일 EEEE", java.util.Locale.KOREAN)
+    return today.format(formatter)
 }
