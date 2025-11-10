@@ -22,6 +22,7 @@ import javax.inject.Inject
  * Firebase Firestore 기반 Habit Repository 구현
  * ✅ 달성률: 생성일부터 오늘까지 체크해야 할 날 대비 실제 체크한 날의 비율
  * ✅ 스트릭: 연속으로 체크한 일수
+ * ✅ 빈 데이터에도 즉시 emit (무한 로딩 방지)
  */
 class HabitFirestoreRepository @Inject constructor(
     private val firestore: FirebaseFirestore
@@ -37,11 +38,17 @@ class HabitFirestoreRepository @Inject constructor(
     // ==================== Habit CRUD ====================
 
     override fun getAllHabits(userId: String): Flow<List<Habit>> = callbackFlow {
+        Log.d(TAG, "getAllHabits Flow 시작 - userId: $userId")
+
+        // ✨ 즉시 빈 리스트 emit (무한 로딩 방지)
+        trySend(emptyList())
+
         val listener = habitsCollection
             .whereEqualTo("userId", userId)
             .whereEqualTo("active", true)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    Log.e(TAG, "getAllHabits 에러", error)
                     close(error)
                     return@addSnapshotListener
                 }
@@ -50,6 +57,7 @@ class HabitFirestoreRepository @Inject constructor(
                     doc.toObject(HabitFirestoreDto::class.java)?.toDomain()
                 } ?: emptyList()
 
+                Log.d(TAG, "getAllHabits 데이터 수신: ${habits.size}개")
                 trySend(habits)
             }
 
@@ -66,12 +74,19 @@ class HabitFirestoreRepository @Inject constructor(
     }
 
     override fun getPersonalHabits(userId: String): Flow<List<Habit>> = callbackFlow {
+        Log.d(TAG, "=== getPersonalHabits Flow 시작 ===")
+        Log.d(TAG, "userId: $userId")
+
+        // ✨ 즉시 빈 리스트 emit (무한 로딩 방지)
+        trySend(emptyList())
+
         val listener = habitsCollection
             .whereEqualTo("userId", userId)
             .whereEqualTo("groupShared", false)
             .whereEqualTo("active", true)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    Log.e(TAG, "❌ getPersonalHabits 에러", error)
                     close(error)
                     return@addSnapshotListener
                 }
@@ -80,19 +95,29 @@ class HabitFirestoreRepository @Inject constructor(
                     doc.toObject(HabitFirestoreDto::class.java)?.toDomain()
                 } ?: emptyList()
 
+                Log.d(TAG, "✅ getPersonalHabits 데이터 수신: ${habits.size}개")
                 trySend(habits)
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            Log.d(TAG, "getPersonalHabits Flow 종료")
+            listener.remove()
+        }
     }
 
     override fun getGroupHabits(groupId: String): Flow<List<Habit>> = callbackFlow {
+        Log.d(TAG, "getGroupHabits Flow 시작 - groupId: $groupId")
+
+        // ✨ 즉시 빈 리스트 emit (무한 로딩 방지)
+        trySend(emptyList())
+
         val listener = habitsCollection
             .whereEqualTo("groupId", groupId)
             .whereEqualTo("groupShared", true)
             .whereEqualTo("active", true)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    Log.e(TAG, "getGroupHabits 에러", error)
                     close(error)
                     return@addSnapshotListener
                 }
@@ -101,6 +126,7 @@ class HabitFirestoreRepository @Inject constructor(
                     doc.toObject(HabitFirestoreDto::class.java)?.toDomain()
                 } ?: emptyList()
 
+                Log.d(TAG, "getGroupHabits 데이터 수신: ${habits.size}개")
                 trySend(habits)
             }
 
@@ -151,10 +177,16 @@ class HabitFirestoreRepository @Inject constructor(
     // ==================== Habit Check CRUD ====================
 
     override fun getChecksByHabit(habitId: String): Flow<List<HabitCheck>> = callbackFlow {
+        Log.d(TAG, "=== getChecksByHabit Flow 시작 (habitId=$habitId) ===")
+
+        // ✨ 즉시 빈 리스트 emit (무한 로딩 방지)
+        trySend(emptyList())
+
         val listener = checksCollection
             .whereEqualTo("habitId", habitId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    Log.e(TAG, "❌ getChecksByHabit 에러: ${error.message}", error)
                     close(error)
                     return@addSnapshotListener
                 }
@@ -163,10 +195,14 @@ class HabitFirestoreRepository @Inject constructor(
                     doc.toObject(HabitCheckFirestoreDto::class.java)?.toDomain()
                 } ?: emptyList()
 
+                Log.d(TAG, "✅ getChecksByHabit 데이터 수신: ${checks.size}개")
                 trySend(checks)
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            Log.d(TAG, "getChecksByHabit Flow 종료")
+            listener.remove()
+        }
     }
 
     override suspend fun getCheckByDate(habitId: String, date: LocalDate): HabitCheck? {
@@ -186,11 +222,18 @@ class HabitFirestoreRepository @Inject constructor(
     }
 
     override fun getChecksByUserAndDate(userId: String, date: LocalDate): Flow<List<HabitCheck>> = callbackFlow {
+        Log.d(TAG, "=== getChecksByUserAndDate Flow 시작 (userId=$userId, date=$date) ===")
+
+        // ✨✨✨ 핵심! 즉시 빈 리스트 emit (무한 로딩 방지)
+        trySend(emptyList())
+        Log.d(TAG, "✅ 빈 리스트 즉시 emit 완료")
+
         val listener = checksCollection
             .whereEqualTo("userId", userId)
             .whereEqualTo("date", date.toString())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    Log.e(TAG, "❌ getChecksByUserAndDate 에러: ${error.message}", error)
                     close(error)
                     return@addSnapshotListener
                 }
@@ -199,10 +242,14 @@ class HabitFirestoreRepository @Inject constructor(
                     doc.toObject(HabitCheckFirestoreDto::class.java)?.toDomain()
                 } ?: emptyList()
 
+                Log.d(TAG, "✅ getChecksByUserAndDate 데이터 수신: ${checks.size}개")
                 trySend(checks)
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            Log.d(TAG, "getChecksByUserAndDate Flow 종료")
+            listener.remove()
+        }
     }
 
     override fun getChecksByDateRange(
@@ -210,12 +257,18 @@ class HabitFirestoreRepository @Inject constructor(
         startDate: LocalDate,
         endDate: LocalDate
     ): Flow<List<HabitCheck>> = callbackFlow {
+        Log.d(TAG, "=== getChecksByDateRange Flow 시작 ===")
+
+        // ✨ 즉시 빈 리스트 emit (무한 로딩 방지)
+        trySend(emptyList())
+
         val listener = checksCollection
             .whereEqualTo("habitId", habitId)
             .whereGreaterThanOrEqualTo("date", startDate.toString())
             .whereLessThanOrEqualTo("date", endDate.toString())
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    Log.e(TAG, "❌ getChecksByDateRange 에러: ${error.message}", error)
                     close(error)
                     return@addSnapshotListener
                 }
@@ -224,10 +277,14 @@ class HabitFirestoreRepository @Inject constructor(
                     doc.toObject(HabitCheckFirestoreDto::class.java)?.toDomain()
                 } ?: emptyList()
 
+                Log.d(TAG, "✅ getChecksByDateRange 데이터 수신: ${checks.size}개")
                 trySend(checks)
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            Log.d(TAG, "getChecksByDateRange Flow 종료")
+            listener.remove()
+        }
     }
 
     override suspend fun insertCheck(check: HabitCheck) {
@@ -250,11 +307,15 @@ class HabitFirestoreRepository @Inject constructor(
     }
 
     override suspend fun toggleHabitCheck(habitId: String, userId: String, date: LocalDate) {
+        Log.d(TAG, "=== toggleHabitCheck 시작 (habitId=$habitId, date=$date) ===")
+
         val existingCheck = getCheckByDate(habitId, date)
 
         if (existingCheck != null) {
+            Log.d(TAG, "기존 체크 삭제")
             deleteCheck(existingCheck)
         } else {
+            Log.d(TAG, "새 체크 추가")
             val newCheck = HabitCheck(
                 id = UUID.randomUUID().toString(),
                 habitId = habitId,
@@ -264,6 +325,8 @@ class HabitFirestoreRepository @Inject constructor(
             )
             insertCheck(newCheck)
         }
+
+        Log.d(TAG, "✅ toggleHabitCheck 완료")
     }
 
     // ==================== Statistics ====================

@@ -10,7 +10,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -70,31 +69,55 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        Log.d(TAG, "=== MainActivity onCreate 시작 ===")
+
+        // ✨ 핵심: UI를 렌더링하기 전에 로그인을 먼저 완료
         lifecycleScope.launch {
             try {
-                authManager.signInAnonymously()
-                Log.d(TAG, "익명 로그인 성공")
+                Log.d(TAG, "익명 로그인 시도...")
+                val result = authManager.signInAnonymously()
 
-                val userId = authManager.currentUserId
-                if (userId != null) {
-                    initializeUserUseCase(userId)
+                if (result.isSuccess) {
+                    val user = result.getOrNull()
+                    Log.d(TAG, "✅ 익명 로그인 성공: uid=${user?.uid}")
+
+                    val userId = authManager.currentUserId
+                    Log.d(TAG, "currentUserId 확인: $userId")
+
+                    if (userId != null) {
+                        Log.d(TAG, "사용자 초기화 중...")
+                        initializeUserUseCase(userId)
+                        Log.d(TAG, "✅ 사용자 초기화 완료")
+                    }
+                } else {
+                    Log.e(TAG, "❌ 익명 로그인 실패: ${result.exceptionOrNull()?.message}")
                 }
 
                 requestNotificationPermission()
                 checkAndSaveFcmToken()
             } catch (e: Exception) {
-                Log.e(TAG, "초기화 실패", e)
+                Log.e(TAG, "❌ 초기화 실패", e)
             }
         }
 
+        // ✨ setContent는 동기적으로 실행 (로그인과 별개)
         setContent {
             CheckCheckTheme {
+                Log.d(TAG, "setContent 실행")
+
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
+                // ✨ authStateFlow는 초기값으로 currentUser를 사용
+                // FirebaseAuthManager에서 즉시 emit하도록 수정했으므로
+                // 로그인 완료 후 자동으로 업데이트됨
                 val authState by authManager.authStateFlow()
                     .collectAsState(initial = authManager.currentUser)
+
+                LaunchedEffect(authState) {
+                    Log.d(TAG, "authState 변경: ${authState?.uid}")
+                }
 
                 Box(
                     modifier = Modifier
@@ -102,16 +125,27 @@ class MainActivity : ComponentActivity() {
                         .background(OrangeBackground)
                 ) {
                     if (authState == null) {
+                        Log.d(TAG, "로딩 화면 표시")
                         // 로딩 화면
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(
-                                color = OrangePrimary
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    color = OrangePrimary
+                                )
+                                Text(
+                                    text = "로그인 중...",
+                                    color = TextPrimaryLight
+                                )
+                            }
                         }
                     } else {
+                        Log.d(TAG, "메인 화면 렌더링 (userId=${authState!!.uid})")
                         // 메인 화면
                         Scaffold(
                             bottomBar = {
@@ -132,6 +166,7 @@ class MainActivity : ComponentActivity() {
                             },
                             containerColor = OrangeBackground
                         ) { padding ->
+                            Log.d(TAG, "NavGraph 렌더링")
                             NavGraph(
                                 navController = navController,
                                 startDestination = Screen.Home.route,
@@ -142,6 +177,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
+        Log.d(TAG, "=== MainActivity onCreate 완료 ===")
     }
 
     private fun shouldShowBottomBar(currentRoute: String?): Boolean {

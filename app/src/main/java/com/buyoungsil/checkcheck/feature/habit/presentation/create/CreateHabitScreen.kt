@@ -1,21 +1,32 @@
 package com.buyoungsil.checkcheck.feature.habit.presentation.create
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.buyoungsil.checkcheck.core.ui.components.*
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
- * 🧡 습관 생성 화면 - 실제 ViewModel에 정확히 맞춤
+ * 🧡 습관 생성 화면 - 아이콘 선택 기능 추가
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,6 +35,7 @@ fun CreateHabitScreen(
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showIconPicker by remember { mutableStateOf(false) }
 
     // success가 true가 되면 뒤로가기
     LaunchedEffect(uiState.success) {
@@ -134,7 +146,7 @@ fun CreateHabitScreen(
                 }
             }
 
-            // 아이콘
+            // ✨ 아이콘 선택 (개선된 부분)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = ComponentShapes.HabitCard,
@@ -152,10 +164,65 @@ fun CreateHabitScreen(
                         color = TextPrimaryLight
                     )
 
-                    Text(
-                        text = "선택된 아이콘: ${uiState.icon}",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                    // 선택된 아이콘 표시 및 변경 버튼
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 현재 선택된 아이콘
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(OrangePrimary, OrangeSecondary)
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = uiState.icon,
+                                    fontSize = 32.sp
+                                )
+                            }
+
+                            Column {
+                                Text(
+                                    text = "선택된 아이콘",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondaryLight
+                                )
+                                Text(
+                                    text = uiState.icon,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // 변경 버튼
+                        OutlinedButton(
+                            onClick = { showIconPicker = true },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = OrangePrimary
+                            ),
+                            shape = ComponentShapes.SecondaryButton
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("변경")
+                        }
+                    }
                 }
             }
 
@@ -174,7 +241,7 @@ fun CreateHabitScreen(
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
                                 Text(
@@ -260,4 +327,114 @@ fun CreateHabitScreen(
             )
         }
     }
+
+    // 아이콘 선택 다이얼로그
+    if (showIconPicker) {
+        IconPickerDialog(
+            currentIcon = uiState.icon,
+            onIconSelected = { icon ->
+                viewModel.onIconChange(icon)
+                showIconPicker = false
+            },
+            onDismiss = { showIconPicker = false }
+        )
+    }
+}
+
+/**
+ * 아이콘 선택 다이얼로그
+ */
+@Composable
+private fun IconPickerDialog(
+    currentIcon: String,
+    onIconSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val icons = remember {
+        listOf(
+            // 건강 & 운동
+            "💪", "🏃", "🏋️", "🧘", "🚴", "⚽", "🏀", "🎾", "🏊",
+
+            // 음식 & 건강
+            "🍎", "🥗", "🥑", "🥕", "🥤", "💧", "☕", "🍽️",
+
+            // 공부 & 업무
+            "📚", "📖", "✍️", "📝", "💼", "💻", "🎯", "🎓",
+
+            // 취미 & 여가
+            "🎵", "🎸", "🎨", "🖌️", "📷", "🎮", "🎬", "📺",
+
+            // 일상 & 루틴
+            "😴", "🛏️", "🚿", "🧹", "🧺", "🪥", "💆", "🧖",
+
+            // 감정 & 마음
+            "❤️", "🧡", "💛", "💚", "💙", "💜", "🤍", "❤️‍🔥",
+
+            // 자연 & 식물
+            "🌱", "🌿", "🌻", "🌺", "🌸", "🌼", "🌲", "🍃",
+
+            // 시간 & 달성
+            "⏰", "⏱️", "⌛", "🔔", "🔥", "⭐", "✨", "🎉"
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "아이콘 선택",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(6),
+                modifier = Modifier.height(400.dp),
+                contentPadding = PaddingValues(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(icons) { icon ->
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (icon == currentIcon) {
+                                    Brush.linearGradient(
+                                        colors = listOf(OrangePrimary, OrangeSecondary)
+                                    )
+                                } else {
+                                    Brush.linearGradient(
+                                        colors = listOf(
+                                            OrangeSurfaceVariant,
+                                            OrangeSurfaceVariant
+                                        )
+                                    )
+                                }
+                            )
+                            .border(
+                                width = if (icon == currentIcon) 2.dp else 0.dp,
+                                color = if (icon == currentIcon) OrangePrimary else androidx.compose.ui.graphics.Color.Transparent,
+                                shape = CircleShape
+                            )
+                            .clickable { onIconSelected(icon) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = icon,
+                            fontSize = 28.sp
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("닫기", color = OrangePrimary)
+            }
+        },
+        shape = ComponentShapes.Dialog
+    )
 }

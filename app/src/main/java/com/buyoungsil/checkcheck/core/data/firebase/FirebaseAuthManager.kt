@@ -1,5 +1,6 @@
 package com.buyoungsil.checkcheck.core.data.firebase
 
+import android.util.Log
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -15,6 +16,10 @@ class FirebaseAuthManager @Inject constructor(
     private val auth: FirebaseAuth
 ) {
 
+    companion object {
+        private const val TAG = "FirebaseAuthManager"
+    }
+
     val currentUser: FirebaseUser?
         get() = auth.currentUser
 
@@ -27,19 +32,34 @@ class FirebaseAuthManager @Inject constructor(
 
     // 사용자 상태 Flow
     fun authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
+        Log.d(TAG, "=== authStateFlow 시작 ===")
+
+        // ✨✨✨ 핵심! 즉시 현재 사용자 emit (무한 로딩 방지)
+        val initialUser = auth.currentUser
+        Log.d(TAG, "초기 사용자: ${initialUser?.uid}")
+        trySend(initialUser)
+
         val listener = FirebaseAuth.AuthStateListener { auth ->
+            Log.d(TAG, "Auth 상태 변경: ${auth.currentUser?.uid}")
             trySend(auth.currentUser)
         }
         auth.addAuthStateListener(listener)
-        awaitClose { auth.removeAuthStateListener(listener) }
+
+        awaitClose {
+            Log.d(TAG, "authStateFlow 종료")
+            auth.removeAuthStateListener(listener)
+        }
     }
 
     // 익명 로그인
     suspend fun signInAnonymously(): Result<FirebaseUser> {
         return try {
+            Log.d(TAG, "익명 로그인 시작")
             val result = auth.signInAnonymously().await()
+            Log.d(TAG, "✅ 익명 로그인 성공: uid=${result.user?.uid}")
             Result.success(result.user!!)
         } catch (e: Exception) {
+            Log.e(TAG, "❌ 익명 로그인 실패", e)
             Result.failure(e)
         }
     }

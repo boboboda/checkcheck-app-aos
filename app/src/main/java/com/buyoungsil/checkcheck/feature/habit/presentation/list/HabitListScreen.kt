@@ -1,29 +1,35 @@
 package com.buyoungsil.checkcheck.feature.habit.presentation.list
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.buyoungsil.checkcheck.core.ui.components.OrangeFAB
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
- * 🧡 습관 목록 화면 - MZ 오렌지 테마
+ * 🧡 습관 목록 화면
+ * ✨ SwipeToDismissBox로 스와이프 삭제 구현
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HabitListScreen(
     viewModel: HabitListViewModel = hiltViewModel(),
-    onNavigateToCreate: () -> Unit = {}
+    onNavigateToCreate: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
@@ -33,10 +39,9 @@ fun HabitListScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "내 습관",
+                        "습관 관리",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimaryLight
+                        fontWeight = FontWeight.Bold
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -45,14 +50,14 @@ fun HabitListScreen(
                 )
             )
         },
-        containerColor = OrangeBackground,
         floatingActionButton = {
             OrangeFAB(
                 onClick = onNavigateToCreate,
                 icon = Icons.Default.Add,
                 contentDescription = "습관 추가"
             )
-        }
+        },
+        containerColor = OrangeBackground
     ) { padding ->
         Box(
             modifier = Modifier
@@ -60,53 +65,31 @@ fun HabitListScreen(
                 .padding(padding)
         ) {
             when {
-                uiState.isLoading -> {
-                    // 로딩
+                uiState.loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            CircularProgressIndicator(
-                                color = OrangePrimary,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Text(
-                                text = "불러오는 중...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondaryLight
-                            )
-                        }
+                        CircularProgressIndicator(color = OrangePrimary)
                     }
                 }
 
                 uiState.error != null -> {
-                    // 에러
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(32.dp),
+                            .padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "😢",
-                            fontSize = 64.sp
+                            text = "⚠️",
+                            style = MaterialTheme.typography.displayMedium
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = uiState.error ?: "오류가 발생했어요",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimaryLight
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "다시 시도해주세요",
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = uiState.error!!,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = TextSecondaryLight
                         )
                         Spacer(modifier = Modifier.height(24.dp))
@@ -116,27 +99,24 @@ fun HabitListScreen(
                                 containerColor = OrangePrimary
                             )
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
                             Text("다시 시도")
                         }
                     }
                 }
 
                 uiState.habits.isEmpty() -> {
-                    // 빈 상태
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(32.dp),
+                            .padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
                             text = "📝",
-                            fontSize = 80.sp
+                            style = MaterialTheme.typography.displayLarge
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "아직 습관이 없어요",
                             style = MaterialTheme.typography.titleLarge,
@@ -164,7 +144,6 @@ fun HabitListScreen(
                 }
 
                 else -> {
-                    // 습관 목록
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(20.dp),
@@ -176,7 +155,7 @@ fun HabitListScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = ComponentShapes.HabitCard,
                                 colors = CardDefaults.cardColors(
-                                    containerColor = androidx.compose.ui.graphics.Color.White
+                                    containerColor = Color.White
                                 ),
                                 elevation = CardDefaults.cardElevation(
                                     defaultElevation = 2.dp
@@ -199,23 +178,79 @@ fun HabitListScreen(
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = TextSecondaryLight
                                     )
+                                    Text(
+                                        text = "💡 팁: 습관 카드를 왼쪽으로 스와이프해서 삭제할 수 있어요",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = OrangePrimary,
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 }
                             }
                         }
 
-                        // 습관 카드들
+                        // ✨ 스와이프로 삭제 가능한 습관 카드들
                         items(
                             items = uiState.habits,
                             key = { it.habit.id }
                         ) { habitWithStats ->
-                            HabitCard(
-                                habitName = habitWithStats.habit.title,
-                                isCompleted = habitWithStats.isCheckedToday,
-                                streak = habitWithStats.statistics?.currentStreak ?: 0,
-                                completionRate = habitWithStats.statistics?.completionRate ?: 0f,
-                                habitIcon = habitWithStats.habit.icon,
-                                onCheck = {
-                                    viewModel.onHabitCheck(habitWithStats.habit.id)
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = { dismissValue ->
+                                    when (dismissValue) {
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            showDeleteDialog = habitWithStats.habit.id
+                                            false // 다이얼로그 확인 후 삭제
+                                        }
+                                        else -> false
+                                    }
+                                },
+                                positionalThreshold = { it * 0.25f }
+                            )
+
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                enableDismissFromStartToEnd = false,
+                                enableDismissFromEndToStart = true,
+                                backgroundContent = {
+                                    // 스와이프 배경 (삭제 표시)
+                                    val color by animateColorAsState(
+                                        targetValue = when (dismissState.targetValue) {
+                                            SwipeToDismissBoxValue.EndToStart -> ErrorRed
+                                            else -> Color.Transparent
+                                        },
+                                        label = "background"
+                                    )
+
+                                    val scale by animateFloatAsState(
+                                        targetValue = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) 1.3f else 0.8f,
+                                        label = "scale"
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(color, ComponentShapes.HabitCard)
+                                            .padding(horizontal = 20.dp),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "삭제",
+                                            tint = Color.White,
+                                            modifier = Modifier.scale(scale)
+                                        )
+                                    }
+                                },
+                                content = {
+                                    HabitCard(
+                                        habitName = habitWithStats.habit.title,
+                                        isCompleted = habitWithStats.isCheckedToday,
+                                        streak = habitWithStats.statistics?.currentStreak ?: 0,
+                                        completionRate = habitWithStats.statistics?.completionRate ?: 0f,
+                                        habitIcon = habitWithStats.habit.icon,
+                                        onCheck = {
+                                            viewModel.onHabitCheck(habitWithStats.habit.id)
+                                        }
+                                    )
                                 }
                             )
                         }
@@ -265,7 +300,8 @@ fun HabitListScreen(
                 ) {
                     Text("취소")
                 }
-            }
+            },
+            shape = ComponentShapes.Dialog
         )
     }
 }

@@ -5,10 +5,11 @@ import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitStatistics
 
 /**
  * 습관 목록 UI State
+ * ✅ isLoading → loading 통일
  */
 data class HabitListUiState(
     val habits: List<HabitWithStats> = emptyList(),
-    val isLoading: Boolean = false,
+    val loading: Boolean = false,  // ✅ isLoading → loading
     val error: String? = null
 )
 

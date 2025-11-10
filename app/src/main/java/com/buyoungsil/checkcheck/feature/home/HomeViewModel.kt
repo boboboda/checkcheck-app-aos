@@ -42,19 +42,43 @@ class HomeViewModel @Inject constructor(
         get() = authManager.currentUserId ?: "anonymous"
 
     init {
+        Log.d(TAG, "=== HomeViewModel 초기화 시작 ===")
+        Log.d(TAG, "currentUserId: $currentUserId")
         loadData()
     }
 
     private fun loadData() {
+        Log.d(TAG, "=== loadData() 시작 ===")
+
         viewModelScope.launch {
+            Log.d(TAG, "viewModelScope.launch 진입")
             _uiState.update { it.copy(isLoading = true) }
+            Log.d(TAG, "isLoading = true 설정 완료")
 
             try {
+                Log.d(TAG, "combine() 호출 전")
+                Log.d(TAG, "Flow 1: getPersonalHabitsUseCase($currentUserId)")
+                Log.d(TAG, "Flow 2: getMyGroupsUseCase($currentUserId)")
+                Log.d(TAG, "Flow 3: getChecksByUserAndDate($currentUserId, ${LocalDate.now()})")
+
                 combine(
-                    getPersonalHabitsUseCase(currentUserId),
-                    getMyGroupsUseCase(currentUserId),
+                    getPersonalHabitsUseCase(currentUserId)
+                        .onStart { Log.d(TAG, "✨ Flow 1 (habits) 시작") }
+                        .onEach { Log.d(TAG, "✅ Flow 1 emit: ${it.size}개 습관") },
+
+                    getMyGroupsUseCase(currentUserId)
+                        .onStart { Log.d(TAG, "✨ Flow 2 (groups) 시작") }
+                        .onEach { Log.d(TAG, "✅ Flow 2 emit: ${it.size}개 그룹") },
+
                     repository.getChecksByUserAndDate(currentUserId, LocalDate.now())
+                        .onStart { Log.d(TAG, "✨ Flow 3 (checks) 시작") }
+                        .onEach { Log.d(TAG, "✅ Flow 3 emit: ${it.size}개 체크") }
                 ) { habits, groups, todayChecks ->
+                    Log.d(TAG, "=== combine 람다 실행 ===")
+                    Log.d(TAG, "habits: ${habits.size}개")
+                    Log.d(TAG, "groups: ${groups.size}개")
+                    Log.d(TAG, "todayChecks: ${todayChecks.size}개")
+
                     val checkedHabitIds = todayChecks.map { it.habitId }.toSet()
 
                     val habitsWithStats = habits.map { habit ->
@@ -71,6 +95,9 @@ class HomeViewModel @Inject constructor(
                     val completedCount = habitsWithStats.count { it.isCheckedToday }
                     val totalCount = habitsWithStats.size
 
+                    Log.d(TAG, "통계 포함 습관: ${habitsWithStats.size}개")
+                    Log.d(TAG, "오늘 완료: $completedCount / $totalCount")
+
                     _uiState.update {
                         it.copy(
                             habits = habitsWithStats,
@@ -81,9 +108,13 @@ class HomeViewModel @Inject constructor(
                             error = null
                         )
                     }
+
+                    Log.d(TAG, "✅ UI State 업데이트 완료 - isLoading=false")
                 }.collect()
+
+                Log.d(TAG, "collect() 완료")
             } catch (e: Exception) {
-                Log.e(TAG, "데이터 로드 실패", e)
+                Log.e(TAG, "❌ loadData 실패", e)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -190,6 +221,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onRetry() {
+        Log.d(TAG, "재시도 버튼 클릭")
         loadData()
     }
 }

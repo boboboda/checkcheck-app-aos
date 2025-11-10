@@ -10,10 +10,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -133,79 +131,62 @@ fun HabitCard(
                             Text(
                                 text = "${streak}일 연속",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = getStreakColor(streak),
-                                fontWeight = FontWeight.Bold
+                                color = OrangePrimary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    // 달성률 표시 (스트릭이 없을 때)
+                    if (streak == 0 && completionRate > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            LinearProgressIndicator(
+                                progress = { completionRate },
+                                modifier = Modifier
+                                    .width(60.dp)
+                                    .height(4.dp)
+                                    .clip(ComponentShapes.Chip),
+                                color = OrangePrimary,
+                                trackColor = DividerLight,
+                            )
+                            Text(
+                                text = "${(completionRate * 100).toInt()}%",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondaryLight
                             )
                         }
                     }
                 }
             }
 
-            // 오른쪽: 체크박스 + 달성률
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // 달성률 표시
-                if (completionRate > 0f) {
-                    Column(
-                        horizontalAlignment = Alignment.End
-                    ) {
-                        Text(
-                            text = "${(completionRate * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = getCompletionColor(completionRate * 100)
-                        )
-
-                        // 작은 프로그레스 바
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(4.dp)
-                                .clip(ComponentShapes.ProgressBar)
-                                .background(OrangeSurfaceVariant)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .fillMaxWidth(completionRate)
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            colors = listOf(OrangePrimary, OrangeSecondary)
-                                        )
-                                    )
+            // 체크박스
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isCompleted) {
+                            Brush.linearGradient(
+                                colors = listOf(OrangePrimary, OrangeSecondary)
+                            )
+                        } else {
+                            Brush.linearGradient(
+                                colors = listOf(UncheckedBackground, UncheckedBackground)
                             )
                         }
-                    }
-                }
-
-                // 체크박스
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isCompleted) {
-                                Brush.linearGradient(
-                                    colors = listOf(OrangePrimary, OrangeSecondary)
-                                )
-                            } else {
-                                Brush.linearGradient(
-                                    colors = listOf(UncheckedBackground, UncheckedBackground)
-                                )
-                            }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isCompleted) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "완료",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isCompleted) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "완료",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
@@ -251,40 +232,79 @@ fun SimpleHabitCard(
             containerColor = cardColor
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isCompleted) 4.dp else 1.dp
+            defaultElevation = if (isCompleted) 4.dp else 2.dp
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = displayIcon,
-                    fontSize = 24.sp,
-                    fontFamily = FontFamily.Default
-                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isCompleted) {
+                                Brush.linearGradient(
+                                    colors = listOf(OrangePrimary, OrangeSecondary)
+                                )
+                            } else {
+                                Brush.linearGradient(
+                                    colors = listOf(OrangeSurfaceVariant, OrangeBackground)
+                                )
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = displayIcon,
+                        fontSize = 24.sp,
+                        fontFamily = FontFamily.Default
+                    )
+                }
 
                 Text(
                     text = habitName,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = if (isCompleted) FontWeight.SemiBold else FontWeight.Normal,
+                    fontWeight = if (isCompleted) FontWeight.SemiBold else FontWeight.Medium,
                     color = if (isCompleted) OrangeDark else TextPrimaryLight
                 )
             }
 
-            Icon(
-                imageVector = if (isCompleted) Icons.Default.Check else Icons.Default.RadioButtonUnchecked,
-                contentDescription = if (isCompleted) "완료" else "미완료",
-                tint = if (isCompleted) OrangePrimary else Color.LightGray,
-                modifier = Modifier.size(24.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isCompleted) {
+                            Brush.linearGradient(
+                                colors = listOf(OrangePrimary, OrangeSecondary)
+                            )
+                        } else {
+                            Brush.linearGradient(
+                                colors = listOf(UncheckedBackground, UncheckedBackground)
+                            )
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isCompleted) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "완료",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
     }
 }
