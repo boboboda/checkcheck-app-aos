@@ -1,11 +1,15 @@
 package com.buyoungsil.checkcheck.feature.home
 
+import android.util.Log
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -13,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -22,6 +27,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.buyoungsil.checkcheck.core.ui.components.*
 import com.buyoungsil.checkcheck.feature.group.domain.model.Group
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
+import com.buyoungsil.checkcheck.feature.task.domain.model.Task
+import com.buyoungsil.checkcheck.feature.task.domain.model.TaskPriority
 import com.buyoungsil.checkcheck.ui.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -37,7 +44,8 @@ fun HomeScreen(
     onNavigateToHabitCreate: (String?) -> Unit,
     onNavigateToGroupList: () -> Unit,
     onNavigateToGroupDetail: (String) -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToHabitList: () -> Unit  // ✅ 추가
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
@@ -137,6 +145,20 @@ fun HomeScreen(
                         contentPadding = PaddingValues(20.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+
+                        // ✅ 긴급 할일 섹션 (새로 추가)
+                        if (uiState.urgentTasks.isNotEmpty()) {
+                            item {
+                                UrgentTasksSection(
+                                    tasks = uiState.urgentTasks,
+                                    onTaskClick = { task ->
+                                        // TODO: Task 상세 화면으로 이동
+                                        Log.d("HomeScreen", "긴급 할일 클릭: ${task.title}")
+                                    }
+                                )
+                            }
+                        }
+
                         // 오늘의 진행률 카드
                         item {
                             TodayProgressCard(
@@ -149,8 +171,14 @@ fun HomeScreen(
                         item {
                             SectionHeader(
                                 title = "📝 내 습관",
-                                actionText = if (uiState.habits.isEmpty()) null else "추가",
-                                onActionClick = { onNavigateToHabitCreate(null) }
+                                actionText = if (uiState.habits.isEmpty()) "추가" else "전체보기",  // ✅ 수정
+                                onActionClick = {
+                                    if (uiState.habits.isEmpty()) {
+                                        onNavigateToHabitCreate(null)
+                                    } else {
+                                        onNavigateToHabitList()  // ✅ 습관 리스트로 이동
+                                    }
+                                }
                             )
                         }
 
@@ -164,14 +192,64 @@ fun HomeScreen(
                                 )
                             }
                         } else {
+                            // ✅ 스와이프 가능한 습관 카드들
                             items(
                                 items = uiState.habits,
                                 key = { it.habit.id }
                             ) { habitWithStats ->
-                                HabitItemCard(
-                                    habitWithStats = habitWithStats,
-                                    onCheck = { viewModel.onHabitCheck(habitWithStats.habit.id) },
-                                    onDelete = { showDeleteDialog = habitWithStats.habit.id }
+                                val dismissState = rememberSwipeToDismissBoxState(
+                                    confirmValueChange = { dismissValue ->
+                                        when (dismissValue) {
+                                            SwipeToDismissBoxValue.EndToStart -> {
+                                                showDeleteDialog = habitWithStats.habit.id
+                                                false
+                                            }
+                                            else -> false
+                                        }
+                                    },
+                                    positionalThreshold = { it * 0.25f }
+                                )
+
+                                SwipeToDismissBox(
+                                    state = dismissState,
+                                    enableDismissFromStartToEnd = false,
+                                    enableDismissFromEndToStart = true,
+                                    backgroundContent = {
+                                        val color by animateColorAsState(
+                                            targetValue = when (dismissState.targetValue) {
+                                                SwipeToDismissBoxValue.EndToStart -> ErrorRed
+                                                else -> Color.Transparent
+                                            },
+                                            label = "background"
+                                        )
+
+                                        val scale by animateFloatAsState(
+                                            targetValue = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) 1.3f else 0.8f,
+                                            label = "scale"
+                                        )
+
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(color, ComponentShapes.HabitCard)
+                                                .padding(horizontal = 20.dp),
+                                            contentAlignment = Alignment.CenterEnd
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "삭제",
+                                                tint = Color.White,
+                                                modifier = Modifier.scale(scale)
+                                            )
+                                        }
+                                    },
+                                    content = {
+                                        HabitItemCard(
+                                            habitWithStats = habitWithStats,
+                                            onCheck = { viewModel.onHabitCheck(habitWithStats.habit.id) },
+                                            onDelete = { showDeleteDialog = habitWithStats.habit.id }
+                                        )
+                                    }
                                 )
                             }
                         }
@@ -562,4 +640,182 @@ private fun EmptyStateCard(
 private fun getTodayDate(): String {
     val formatter = DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN)
     return LocalDate.now().format(formatter)
+}
+
+/**
+ * 긴급 할일 섹션
+ */
+@Composable
+private fun UrgentTasksSection(
+    tasks: List<Task>,
+    onTaskClick: (Task) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = ComponentShapes.HabitCard,
+        colors = CardDefaults.cardColors(
+            containerColor = ErrorRed.copy(alpha = 0.08f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, ErrorRed.copy(alpha = 0.3f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 헤더
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "🚨",
+                        fontSize = 24.sp
+                    )
+                    Text(
+                        text = "긴급 할일",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = ErrorRed
+                    )
+                    Badge(
+                        containerColor = ErrorRed
+                    ) {
+                        Text(
+                            text = tasks.size.toString(),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(color = ErrorRed.copy(alpha = 0.2f))
+
+            // 할일 목록
+            tasks.forEach { task ->
+                UrgentTaskItem(
+                    task = task,
+                    onClick = { onTaskClick(task) }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 긴급 할일 아이템
+ */
+@Composable
+private fun UrgentTaskItem(
+    task: Task,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .background(Color.White)
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 우선순위 아이콘
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(
+                    when (task.priority) {
+                        TaskPriority.URGENT -> ErrorRed.copy(alpha = 0.15f)
+                        TaskPriority.NORMAL -> OrangePrimary.copy(alpha = 0.15f)
+                        TaskPriority.LOW -> TextSecondaryLight.copy(alpha = 0.15f)
+                    }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = task.priority.icon,
+                fontSize = 20.sp
+            )
+        }
+
+        // 할일 정보
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = task.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimaryLight,
+                maxLines = 1
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 마감일
+                if (task.dueDate != null) {
+                    val isToday = task.dueDate == LocalDate.now()
+                    val isTomorrow = task.dueDate == LocalDate.now().plusDays(1)
+                    val dateText = when {
+                        isToday -> "오늘"
+                        isTomorrow -> "내일"
+                        else -> task.dueDate.format(DateTimeFormatter.ofPattern("M/d"))
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "📅",
+                            fontSize = 12.sp
+                        )
+                        Text(
+                            text = dateText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isToday) ErrorRed else TextSecondaryLight,
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+
+                // 담당자
+                if (task.assigneeName != null) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "👤",
+                            fontSize = 12.sp
+                        )
+                        Text(
+                            text = task.assigneeName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondaryLight
+                        )
+                    }
+                }
+            }
+        }
+
+        // 화살표
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = TextSecondaryLight.copy(alpha = 0.5f)
+        )
+    }
 }

@@ -13,7 +13,7 @@ import javax.inject.Inject
 
 /**
  * 습관 목록 ViewModel
- * ✅ 로딩 상태 수정 및 로그 추가
+ * ✅ 로딩 상태 개선 - 첫 번째 빈 emit 무시
  */
 @HiltViewModel
 class HabitListViewModel @Inject constructor(
@@ -56,6 +56,7 @@ class HabitListViewModel @Inject constructor(
                             )
                         }
                     }
+                    .drop(1)  // ✅ 첫 번째 빈 emit 무시!
                     .collect { habits ->
                         Log.d(TAG, "✅ 습관 데이터 수신: ${habits.size}개")
 
@@ -104,7 +105,6 @@ class HabitListViewModel @Inject constructor(
                 userId = currentUserId,
                 date = LocalDate.now()
             )
-            // 체크 후 통계 갱신을 위해 다시 로드하지 않음 (이미 Flow로 실시간 업데이트)
         }
     }
 
@@ -112,7 +112,6 @@ class HabitListViewModel @Inject constructor(
         viewModelScope.launch {
             Log.d(TAG, "습관 삭제: $habitId")
             deleteHabitUseCase(habitId)
-            // Flow가 자동으로 업데이트
         }
     }
 

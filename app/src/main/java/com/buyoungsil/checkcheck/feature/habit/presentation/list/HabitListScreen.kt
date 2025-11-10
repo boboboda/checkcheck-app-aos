@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,12 +25,14 @@ import com.buyoungsil.checkcheck.ui.theme.*
 /**
  * 🧡 습관 목록 화면
  * ✨ SwipeToDismissBox로 스와이프 삭제 구현
+ * ✅ 로딩 처리 개선 (로딩 → 데이터 없음/리스트)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HabitListScreen(
     viewModel: HabitListViewModel = hiltViewModel(),
-    onNavigateToCreate: () -> Unit
+    onNavigateToCreate: () -> Unit,
+    onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
@@ -44,18 +47,31 @@ fun HabitListScreen(
                         fontWeight = FontWeight.Bold
                     )
                 },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "뒤로가기",
+                            tint = TextPrimaryLight
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = OrangeBackground,
-                    titleContentColor = TextPrimaryLight
+                    titleContentColor = TextPrimaryLight,
+                    navigationIconContentColor = TextPrimaryLight
                 )
             )
         },
         floatingActionButton = {
-            OrangeFAB(
-                onClick = onNavigateToCreate,
-                icon = Icons.Default.Add,
-                contentDescription = "습관 추가"
-            )
+            // ✅ 로딩 중이 아닐 때만 FAB 표시
+            if (!uiState.loading) {
+                OrangeFAB(
+                    onClick = onNavigateToCreate,
+                    icon = Icons.Default.Add,
+                    contentDescription = "습관 추가"
+                )
+            }
         },
         containerColor = OrangeBackground
     ) { padding ->
@@ -65,15 +81,30 @@ fun HabitListScreen(
                 .padding(padding)
         ) {
             when {
+                // ✅ 1순위: 로딩 중
                 uiState.loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = OrangePrimary)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                color = OrangePrimary,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Text(
+                                text = "습관을 불러오는 중...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondaryLight
+                            )
+                        }
                     }
                 }
 
+                // ✅ 2순위: 에러
                 uiState.error != null -> {
                     Column(
                         modifier = Modifier
@@ -87,6 +118,13 @@ fun HabitListScreen(
                             style = MaterialTheme.typography.displayMedium
                         )
                         Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "오류가 발생했어요",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimaryLight
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = uiState.error!!,
                             style = MaterialTheme.typography.bodyLarge,
@@ -104,7 +142,8 @@ fun HabitListScreen(
                     }
                 }
 
-                uiState.habits.isEmpty() -> {
+                // ✅ 3순위: 데이터 없음 (로딩 완료 후)
+                !uiState.loading && uiState.habits.isEmpty() -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -143,6 +182,7 @@ fun HabitListScreen(
                     }
                 }
 
+                // ✅ 4순위: 데이터 있음 (로딩 완료 후)
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -279,29 +319,23 @@ fun HabitListScreen(
                 Text("정말 이 습관을 삭제하시겠어요?\n체크 기록도 함께 삭제됩니다.")
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         viewModel.onDeleteHabit(habitId)
                         showDeleteDialog = null
                     },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = ErrorRed
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ErrorRed
                     )
                 ) {
-                    Text(
-                        text = "삭제",
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("삭제")
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showDeleteDialog = null }
-                ) {
+                TextButton(onClick = { showDeleteDialog = null }) {
                     Text("취소")
                 }
-            },
-            shape = ComponentShapes.Dialog
+            }
         )
     }
 }

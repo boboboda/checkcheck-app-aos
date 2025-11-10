@@ -1,5 +1,7 @@
 package com.buyoungsil.checkcheck.feature.group.presentation.detail
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,21 +14,24 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.buyoungsil.checkcheck.core.ui.components.OrangeFAB
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitCard
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
 import com.buyoungsil.checkcheck.feature.task.presentation.list.TaskCard
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
- * 🧡 그룹 상세 화면 - MZ 오렌지 테마
- * 따뜻하고 활기찬 디자인
+ * 🧡 그룹 상세 화면
+ * ✅ 스피드 다이얼 FAB
+ * ✅ 초대 코드 다이얼로그
+ * ✅ 그룹 나가기
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +43,9 @@ fun GroupDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showOptionsMenu by remember { mutableStateOf(false) }
+    var isFabExpanded by remember { mutableStateOf(false) }
+    var showInviteDialog by remember { mutableStateOf(false) }
+    var showLeaveDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -48,7 +56,7 @@ fun GroupDetailScreen(
                             text = uiState.group?.name ?: "그룹",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimaryLight
+                            color = Color.Black
                         )
                         Text(
                             text = "오늘 ${uiState.todayCompletedCount}/${uiState.todayTotalCount} 완료 🎉",
@@ -62,54 +70,80 @@ fun GroupDetailScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "뒤로가기",
-                            tint = TextPrimaryLight
+                            tint = Color.Black
                         )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showOptionsMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "더보기",
-                            tint = TextPrimaryLight
-                        )
+                    Box {
+                        IconButton(onClick = { showOptionsMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "더보기",
+                                tint = Color.Black
+                            )
+                        }
+
+                        // ✅ 드롭다운 메뉴
+                        DropdownMenu(
+                            expanded = showOptionsMenu,
+                            onDismissRequest = { showOptionsMenu = false },
+                            offset = DpOffset(0.dp, 0.dp)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("초대하기") },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    showInviteDialog = true
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.PersonAdd, contentDescription = null)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        "그룹 나가기",
+                                        color = ErrorRed
+                                    )
+                                },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    showLeaveDialog = true
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.ExitToApp,
+                                        contentDescription = null,
+                                        tint = ErrorRed
+                                    )
+                                }
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = OrangeBackground,
-                    titleContentColor = TextPrimaryLight,
-                    navigationIconContentColor = TextPrimaryLight
+                    titleContentColor = Color.Black,
+                    navigationIconContentColor = Color.Black
                 )
             )
         },
         containerColor = OrangeBackground,
         floatingActionButton = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.End
-            ) {
-                // 할일 추가 버튼
-                SmallFloatingActionButton(
-                    onClick = onNavigateToTaskCreate,
-                    containerColor = OrangeSecondary,
-                    contentColor = Color.White
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "할일 추가",
-                        modifier = Modifier.size(20.dp)
-                    )
+            // ✅ 스피드 다이얼 FAB
+            SpeedDialFAB(
+                isExpanded = isFabExpanded,
+                onExpandedChange = { isFabExpanded = it },
+                onHabitClick = {
+                    uiState.group?.let { onNavigateToHabitCreate(it.id) }
+                    isFabExpanded = false
+                },
+                onTaskClick = {
+                    onNavigateToTaskCreate()
+                    isFabExpanded = false
                 }
-
-                // 습관 추가 메인 버튼
-                OrangeFAB(
-                    onClick = {
-                        uiState.group?.let { onNavigateToHabitCreate(it.id) }
-                    },
-                    icon = Icons.Default.Add,
-                    contentDescription = "습관 추가"
-                )
-            }
+            )
         }
     ) { padding ->
         Box(
@@ -119,44 +153,29 @@ fun GroupDetailScreen(
         ) {
             when {
                 uiState.isLoading -> {
-                    // 로딩
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            CircularProgressIndicator(
-                                color = OrangePrimary,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Text(
-                                text = "불러오는 중...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondaryLight
-                            )
-                        }
+                        CircularProgressIndicator(color = OrangePrimary)
                     }
                 }
 
                 uiState.error != null -> {
-                    // 에러
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(32.dp),
+                            .padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "😢",
-                            fontSize = 64.sp
+                            text = "⚠️",
+                            style = MaterialTheme.typography.displayMedium
                         )
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = uiState.error ?: "오류가 발생했어요",
+                            text = "오류가 발생했어요",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimaryLight
@@ -182,7 +201,6 @@ fun GroupDetailScreen(
                 }
 
                 else -> {
-                    // 정상 - 그룹 상세 내용
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(20.dp),
@@ -246,7 +264,7 @@ fun GroupDetailScreen(
                                 EmptyCard(
                                     icon = "✅",
                                     title = "아직 할일이 없어요",
-                                    subtitle = "작은 버튼을 눌러 할일을 추가하세요!"
+                                    subtitle = "+ 버튼을 눌러 할일을 추가하세요!"
                                 )
                             }
                         } else {
@@ -275,33 +293,176 @@ fun GroupDetailScreen(
         }
     }
 
-    // 옵션 메뉴
-    DropdownMenu(
-        expanded = showOptionsMenu,
-        onDismissRequest = { showOptionsMenu = false }
-    ) {
-        DropdownMenuItem(
-            text = { Text("그룹 설정") },
-            onClick = {
-                showOptionsMenu = false
-                // TODO: 그룹 설정 화면으로 이동
-            },
-            leadingIcon = {
-                Icon(Icons.Default.Settings, contentDescription = null)
-            }
+    // ✅ 초대 코드 다이얼로그
+    if (showInviteDialog && uiState.group != null) {
+        InviteCodeDialog(
+            groupName = uiState.group!!.name,
+            inviteCode = uiState.group!!.inviteCode,
+            onDismiss = { showInviteDialog = false }
         )
-        DropdownMenuItem(
-            text = { Text("초대 코드 보기") },
-            onClick = {
-                showOptionsMenu = false
-                // TODO: 초대 코드 다이얼로그 표시
+    }
+
+    // ✅ 그룹 나가기 확인 다이얼로그
+    if (showLeaveDialog && uiState.group != null) {
+        AlertDialog(
+            onDismissRequest = { showLeaveDialog = false },
+            title = {
+                Text(
+                    "그룹 나가기",
+                    fontWeight = FontWeight.Bold
+                )
             },
-            leadingIcon = {
-                Icon(Icons.Default.Share, contentDescription = null)
+            text = {
+                Text("'${uiState.group!!.name}' 그룹에서 나가시겠어요?\n공유 습관과 할일을 더 이상 볼 수 없어요.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.onLeaveGroup(uiState.group!!.id)
+                        showLeaveDialog = false
+                        onNavigateBack()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ErrorRed
+                    )
+                ) {
+                    Text("나가기")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLeaveDialog = false }) {
+                    Text("취소")
+                }
             }
         )
     }
 }
+
+/**
+ * ✨ 스피드 다이얼 FAB
+ */
+@Composable
+private fun SpeedDialFAB(
+    isExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onHabitClick: () -> Unit,
+    onTaskClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        AnimatedVisibility(
+            visible = isExpanded,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SpeedDialItem(
+                    icon = Icons.Default.CheckCircle,
+                    label = "습관 추가",
+                    onClick = onHabitClick,
+                    backgroundColor = OrangePrimary
+                )
+
+                SpeedDialItem(
+                    icon = Icons.Default.Assignment,
+                    label = "할일 추가",
+                    onClick = onTaskClick,
+                    backgroundColor = OrangeSecondary
+                )
+            }
+        }
+
+        val rotation by animateFloatAsState(
+            targetValue = if (isExpanded) 45f else 0f,
+            animationSpec = tween(durationMillis = 300),
+            label = "rotation"
+        )
+
+        FloatingActionButton(
+            onClick = { onExpandedChange(!isExpanded) },
+            modifier = Modifier.size(64.dp),
+            shape = ComponentShapes.FloatingButton,
+            containerColor = Color.Transparent,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 8.dp
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(OrangePrimary, OrangeSecondary)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = if (isExpanded) "닫기" else "추가",
+                    modifier = Modifier
+                        .size(28.dp)
+                        .rotate(rotation),
+                    tint = Color.White
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 스피드 다이얼 아이템
+ */
+@Composable
+private fun SpeedDialItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    backgroundColor: Color
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Surface(
+            shape = ComponentShapes.Chip,
+            color = Color.White,
+            shadowElevation = 4.dp
+        ) {
+            Text(
+                text = label,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimaryLight
+            )
+        }
+
+        SmallFloatingActionButton(
+            onClick = onClick,
+            containerColor = backgroundColor,
+            contentColor = Color.White,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 4.dp,
+                pressedElevation = 6.dp
+            )
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+
 
 /**
  * 📊 그룹 정보 카드

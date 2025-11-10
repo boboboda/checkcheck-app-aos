@@ -7,6 +7,7 @@ import com.buyoungsil.checkcheck.feature.habit.domain.model.Habit
 /**
  * Habit Room Entity
  * ✅ 알림 필드 제거
+ * ✅ isGroupChallenge 추가
  */
 @Entity(tableName = "habits")
 data class HabitEntity(
@@ -19,6 +20,7 @@ data class HabitEntity(
     val color: String,
     val groupShared: Boolean,
     val groupId: String?,
+    val isGroupChallenge: Boolean,  // ✅ 추가
     val createdAt: Long,
     val updatedAt: Long,
     val active: Boolean
@@ -33,6 +35,7 @@ data class HabitEntity(
             color = color,
             groupShared = groupShared,
             groupId = groupId,
+            isGroupChallenge = isGroupChallenge,  // ✅ 추가
             createdAt = createdAt,
             updatedAt = updatedAt,
             active = active
@@ -50,6 +53,7 @@ data class HabitEntity(
                 color = habit.color,
                 groupShared = habit.groupShared,
                 groupId = habit.groupId,
+                isGroupChallenge = habit.isGroupChallenge,  // ✅ 추가
                 createdAt = habit.createdAt,
                 updatedAt = habit.updatedAt,
                 active = habit.active

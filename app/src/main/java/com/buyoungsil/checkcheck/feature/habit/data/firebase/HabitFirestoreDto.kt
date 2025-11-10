@@ -8,6 +8,7 @@ import java.util.Date
 /**
  * Firestore용 Habit DTO
  * ✅ 알림 필드 제거
+ * ✅ isGroupChallenge 추가
  */
 data class HabitFirestoreDto(
     @DocumentId
@@ -19,6 +20,7 @@ data class HabitFirestoreDto(
     val color: String = "#6650a4",
     val groupShared: Boolean = false,
     val groupId: String? = null,
+    val isGroupChallenge: Boolean = false,  // ✅ 추가
     @ServerTimestamp
     val createdAt: Date? = null,
     val active: Boolean = true
@@ -32,6 +34,7 @@ data class HabitFirestoreDto(
         color = "#6650a4",
         groupShared = false,
         groupId = null,
+        isGroupChallenge = false,  // ✅ 추가
         createdAt = null,
         active = true
     )
@@ -46,6 +49,7 @@ data class HabitFirestoreDto(
             color = color,
             groupShared = groupShared,
             groupId = groupId,
+            isGroupChallenge = isGroupChallenge,  // ✅ 추가
             createdAt = createdAt?.time ?: System.currentTimeMillis(),
             updatedAt = createdAt?.time ?: System.currentTimeMillis(),
             active = active
@@ -63,6 +67,7 @@ data class HabitFirestoreDto(
                 color = habit.color,
                 groupShared = habit.groupShared,
                 groupId = habit.groupId,
+                isGroupChallenge = habit.isGroupChallenge,  // ✅ 추가
                 createdAt = Date(habit.createdAt),
                 active = habit.active
             )

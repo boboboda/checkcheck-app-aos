@@ -1,10 +1,12 @@
 package com.buyoungsil.checkcheck.feature.group.presentation.detail
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetGroupByIdUseCase
+import com.buyoungsil.checkcheck.feature.group.domain.usecase.LeaveGroupUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetGroupHabitsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetHabitStatisticsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.ToggleHabitCheckUseCase
@@ -27,9 +29,15 @@ class GroupDetailViewModel @Inject constructor(
     private val toggleHabitCheckUseCase: ToggleHabitCheckUseCase,
     private val completeTaskUseCase: CompleteTaskUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase,
+    private val leaveGroupUseCase: LeaveGroupUseCase,
     savedStateHandle: SavedStateHandle,
     private val authManager: FirebaseAuthManager
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "GroupDetailViewModel"
+    }
+
 
     private val groupId: String = savedStateHandle.get<String>("groupId") ?: ""
 
@@ -125,6 +133,24 @@ class GroupDetailViewModel @Inject constructor(
     fun onDeleteTask(taskId: String) {
         viewModelScope.launch {
             deleteTaskUseCase(taskId)
+        }
+    }
+
+    // ✅ 그룹 나가기 추가
+    fun onLeaveGroup(groupId: String) {
+        viewModelScope.launch {
+            Log.d(TAG, "그룹 탈퇴 시작: groupId=$groupId")
+
+            leaveGroupUseCase(groupId, currentUserId)
+                .onSuccess {
+                    Log.d(TAG, "✅ 그룹 탈퇴 성공")
+                }
+                .onFailure { error ->
+                    Log.e(TAG, "❌ 그룹 탈퇴 실패: ${error.message}", error)
+                    _uiState.update {
+                        it.copy(error = error.message ?: "그룹 탈퇴 실패")
+                    }
+                }
         }
     }
 

@@ -9,7 +9,7 @@ import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitStatistics
  */
 data class HabitListUiState(
     val habits: List<HabitWithStats> = emptyList(),
-    val loading: Boolean = false,  // ✅ isLoading → loading
+    val loading: Boolean = true,  // ✅ isLoading → loading
     val error: String? = null
 )
 

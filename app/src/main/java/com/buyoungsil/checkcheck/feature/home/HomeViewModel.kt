@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
+import com.buyoungsil.checkcheck.feature.group.domain.model.Group
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetMyGroupsUseCase
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.LeaveGroupUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.DeleteHabitUseCase
@@ -12,17 +13,21 @@ import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetPersonalHabitsU
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.ToggleHabitCheckUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.repository.HabitRepository
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
+import com.buyoungsil.checkcheck.feature.task.domain.model.Task
+import com.buyoungsil.checkcheck.feature.task.domain.model.TaskPriority
+import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
+import com.buyoungsil.checkcheck.feature.task.domain.usecase.GetGroupTasksUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
 
-
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getPersonalHabitsUseCase: GetPersonalHabitsUseCase,
     private val getMyGroupsUseCase: GetMyGroupsUseCase,
+    private val getGroupTasksUseCase: GetGroupTasksUseCase,  // ✅ 추가
     private val toggleHabitCheckUseCase: ToggleHabitCheckUseCase,
     private val getHabitStatisticsUseCase: GetHabitStatisticsUseCase,
     private val repository: HabitRepository,
@@ -57,10 +62,8 @@ class HomeViewModel @Inject constructor(
 
             try {
                 Log.d(TAG, "combine() 호출 전")
-                Log.d(TAG, "Flow 1: getPersonalHabitsUseCase($currentUserId)")
-                Log.d(TAG, "Flow 2: getMyGroupsUseCase($currentUserId)")
-                Log.d(TAG, "Flow 3: getChecksByUserAndDate($currentUserId, ${LocalDate.now()})")
 
+                // ✅ 1. 습관 + 그룹 + 긴급 할일을 combine으로 동시 로드
                 combine(
                     getPersonalHabitsUseCase(currentUserId)
                         .onStart { Log.d(TAG, "✨ Flow 1 (habits) 시작") }
@@ -73,17 +76,17 @@ class HomeViewModel @Inject constructor(
                     repository.getChecksByUserAndDate(currentUserId, LocalDate.now())
                         .onStart { Log.d(TAG, "✨ Flow 3 (checks) 시작") }
                         .onEach { Log.d(TAG, "✅ Flow 3 emit: ${it.size}개 체크") }
+
                 ) { habits, groups, todayChecks ->
-                    Log.d(TAG, "=== combine 람다 실행 ===")
-                    Log.d(TAG, "habits: ${habits.size}개")
-                    Log.d(TAG, "groups: ${groups.size}개")
-                    Log.d(TAG, "todayChecks: ${todayChecks.size}개")
+                    Log.d(TAG, "=== combine 내부 ===")
+                    Log.d(TAG, "habits: ${habits.size}")
+                    Log.d(TAG, "groups: ${groups.size}")
+                    Log.d(TAG, "todayChecks: ${todayChecks.size}")
 
-                    val checkedHabitIds = todayChecks.map { it.habitId }.toSet()
-
+                    // 습관 통계 계산
                     val habitsWithStats = habits.map { habit ->
                         val stats = getHabitStatisticsUseCase(habit.id).getOrNull()
-                        val isCheckedToday = checkedHabitIds.contains(habit.id)
+                        val isCheckedToday = todayChecks.any { it.habitId == habit.id && it.completed }
 
                         HabitWithStats(
                             habit = habit,
@@ -92,27 +95,72 @@ class HomeViewModel @Inject constructor(
                         )
                     }
 
-                    val completedCount = habitsWithStats.count { it.isCheckedToday }
-                    val totalCount = habitsWithStats.size
-
-                    Log.d(TAG, "통계 포함 습관: ${habitsWithStats.size}개")
-                    Log.d(TAG, "오늘 완료: $completedCount / $totalCount")
-
-                    _uiState.update {
-                        it.copy(
-                            habits = habitsWithStats,
-                            groups = groups,
-                            todayCompletedCount = completedCount,
-                            todayTotalCount = totalCount,
-                            isLoading = false,
-                            error = null
-                        )
+                    Triple(habitsWithStats, groups, todayChecks.size)
+                }
+                    .catch { e ->
+                        Log.e(TAG, "❌ combine 실행 중 에러", e)
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = e.message ?: "데이터 로드 실패"
+                            )
+                        }
                     }
+                    .collect { (habitsWithStats, groups, todayCompletedCount) ->
+                        Log.d(TAG, "=== collect 진입 ===")
 
-                    Log.d(TAG, "✅ UI State 업데이트 완료 - isLoading=false")
-                }.collect()
+                        // ✅ 2. 그룹들의 긴급 할일 가져오기
+                        val allUrgentTasks = mutableListOf<Task>()
 
-                Log.d(TAG, "collect() 완료")
+                        for (group in groups) {
+                            try {
+                                val tasks = getGroupTasksUseCase(group.id).first()
+
+                                // 긴급 필터링: 완료되지 않았고 (긴급 우선순위 또는 오늘/내일 마감)
+                                val urgentFiltered = tasks.filter { task ->
+                                    task.status != TaskStatus.COMPLETED && (
+                                            task.priority == TaskPriority.URGENT ||
+                                                    task.dueDate?.let { dueDate ->
+                                                        dueDate <= LocalDate.now().plusDays(1)
+                                                    } == true
+                                            )
+                                }
+
+                                allUrgentTasks.addAll(urgentFiltered)
+                                Log.d(TAG, "그룹 ${group.name}: ${urgentFiltered.size}개 긴급 할일")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "그룹 ${group.name} 할일 로드 실패", e)
+                            }
+                        }
+
+                        // 정렬: 우선순위 > 마감일
+                        val sortedUrgentTasks = allUrgentTasks
+                            .sortedWith(
+                                compareBy<Task> { it.priority.ordinal }
+                                    .thenBy { it.dueDate ?: LocalDate.MAX }
+                            )
+                            .take(3)  // 최대 3개만
+
+                        Log.d(TAG, "총 긴급 할일: ${sortedUrgentTasks.size}개")
+
+                        _uiState.update {
+                            it.copy(
+                                habits = habitsWithStats,
+                                groups = groups,
+                                urgentTasks = sortedUrgentTasks,  // ✅ 긴급 할일 설정
+                                todayCompletedCount = todayCompletedCount,
+                                todayTotalCount = habitsWithStats.size,
+                                isLoading = false,
+                                error = null
+                            )
+                        }
+
+                        Log.d(TAG, "✅ UI State 업데이트 완료")
+                        Log.d(TAG, "  - habits: ${habitsWithStats.size}")
+                        Log.d(TAG, "  - groups: ${groups.size}")
+                        Log.d(TAG, "  - urgentTasks: ${sortedUrgentTasks.size}")
+                        Log.d(TAG, "  - isLoading: false")
+                    }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ loadData 실패", e)
                 _uiState.update {
@@ -129,7 +177,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             Log.d(TAG, "습관 체크 시작: habitId=$habitId")
 
-            // ✅ 1단계: 즉시 UI 업데이트 (Optimistic Update)
+            // Optimistic Update
             val currentState = _uiState.value
             val updatedHabits = currentState.habits.map { habitWithStats ->
                 if (habitWithStats.habit.id == habitId) {
@@ -148,7 +196,7 @@ class HomeViewModel @Inject constructor(
                 )
             }
 
-            // ✅ 2단계: 백그라운드에서 Firestore 업데이트
+            // Firestore 업데이트
             try {
                 val result = toggleHabitCheckUseCase(
                     habitId = habitId,
@@ -157,12 +205,11 @@ class HomeViewModel @Inject constructor(
                 )
 
                 result.onSuccess {
-                    Log.d(TAG, "✅ 습관 체크 Firestore 동기화 성공: habitId=$habitId")
-                    // Flow가 자동으로 업데이트하지만 이미 UI는 변경됨
+                    Log.d(TAG, "✅ 습관 체크 성공")
                 }.onFailure { error ->
                     Log.e(TAG, "❌ 습관 체크 실패: ${error.message}", error)
 
-                    // ✅ 3단계: 실패 시 원래 상태로 롤백
+                    // 롤백
                     _uiState.update {
                         it.copy(
                             habits = currentState.habits,
@@ -172,9 +219,9 @@ class HomeViewModel @Inject constructor(
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "❌ 습관 체크 예외 발생", e)
+                Log.e(TAG, "❌ 습관 체크 예외", e)
 
-                // 실패 시 롤백
+                // 롤백
                 _uiState.update {
                     it.copy(
                         habits = currentState.habits,

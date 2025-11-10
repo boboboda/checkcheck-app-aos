@@ -39,7 +39,8 @@ class CreateTaskViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CreateTaskUiState())
     val uiState: StateFlow<CreateTaskUiState> = _uiState.asStateFlow()
 
-    private val currentUserId: String
+    // ✅ private 제거
+    val currentUserId: String
         get() = authManager.currentUserId ?: "anonymous"
 
     init {

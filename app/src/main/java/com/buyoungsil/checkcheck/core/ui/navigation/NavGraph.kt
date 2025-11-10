@@ -43,8 +43,11 @@ fun NavGraph(
                 onNavigateToGroupDetail = { groupId ->
                     navController.navigate(Screen.GroupDetail.createRoute(groupId))
                 },
-                onNavigateToSettings = {  // ✨ 추가
+                onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onNavigateToHabitList = {  // ✅ 추가
+                    navController.navigate(Screen.HabitList.route)
                 }
             )
         }
@@ -54,6 +57,9 @@ fun NavGraph(
             HabitListScreen(
                 onNavigateToCreate = {
                     navController.navigate(Screen.HabitCreate.createRoute())
+                },
+                onNavigateBack = {  // ✅ 이미 추가했어야 함
+                    navController.popBackStack()
                 }
             )
         }

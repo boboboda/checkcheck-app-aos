@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -265,6 +267,57 @@ fun CreateHabitScreen(
                                     checkedTrackColor = OrangePrimary
                                 )
                             )
+                        }
+
+
+// ✨ 그룹 챌린지 토글 (그룹 공유가 켜져있을 때만 표시)
+                        if (uiState.groupShared) {
+                            HorizontalDivider(color = DividerLight)
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "그룹 챌린지",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = TextPrimaryLight
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "✨ NEW",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            modifier = Modifier
+                                                .background(OrangePrimary, RoundedCornerShape(4.dp))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = if (uiState.isGroupChallenge) {
+                                            "모든 멤버가 함께 체크하는 공동 챌린지"
+                                        } else {
+                                            "개인 습관을 그룹에 공개"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondaryLight
+                                    )
+                                }
+                                Switch(
+                                    checked = uiState.isGroupChallenge,
+                                    onCheckedChange = { viewModel.onGroupChallengeToggle(it) },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = OrangePrimary
+                                    )
+                                )
+                            }
                         }
 
                         // 그룹 선택

@@ -90,6 +90,10 @@ class CreateHabitViewModel @Inject constructor(
         _uiState.update { it.copy(selectedGroup = group) }
     }
 
+    fun onGroupChallengeToggle(isChallenge: Boolean) {
+        _uiState.update { it.copy(isGroupChallenge = isChallenge) }
+    }
+
     fun onCreateHabit() {
         val currentState = _uiState.value
 
@@ -119,7 +123,8 @@ class CreateHabitViewModel @Inject constructor(
                 icon = currentState.icon,
                 color = currentState.color,
                 groupShared = currentState.groupShared,
-                groupId = currentState.selectedGroup?.id
+                groupId = currentState.selectedGroup?.id,
+                isGroupChallenge = currentState.isGroupChallenge  // ✅ 추가
             )
 
             createHabitUseCase(habit)
