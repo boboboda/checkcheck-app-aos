@@ -1,4 +1,4 @@
-package com.buyoungsil.checkcheck.core.ui.components
+package com.buyoungsil.checkcheck.feature.habit.presentation.list
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,14 +20,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.buyoungsil.checkcheck.core.util.IconConverter
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
  * 🧡 오렌지 테마 습관 카드
- * 따뜻하고 친근한 느낌의 디자인
+ * 이모지 렌더링 + 아이콘 변환 문제 해결
  */
 @Composable
 fun HabitCard(
@@ -39,6 +41,9 @@ fun HabitCard(
     onCheck: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // ✅ 아이콘 변환 적용
+    val displayIcon = IconConverter.convertToEmoji(habitIcon)
+
     // 체크 시 애니메이션
     val scale by animateFloatAsState(
         targetValue = if (isCompleted) 1.02f else 1f,
@@ -54,13 +59,6 @@ fun HabitCard(
         targetValue = if (isCompleted) CheckedBackground else Color.White,
         animationSpec = spring(),
         label = "cardColor"
-    )
-
-    // 테두리 색상 애니메이션
-    val borderColor by animateColorAsState(
-        targetValue = if (isCompleted) OrangePrimary else Color(0xFFEEEEEE),
-        animationSpec = spring(),
-        label = "borderColor"
     )
 
     Card(
@@ -105,9 +103,11 @@ fun HabitCard(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
+                    // ✅ 변환된 이모지 표시
                     Text(
-                        text = habitIcon,
-                        fontSize = 24.sp
+                        text = displayIcon,
+                        fontSize = 28.sp,
+                        fontFamily = FontFamily.Default
                     )
                 }
 
@@ -127,7 +127,8 @@ fun HabitCard(
                         ) {
                             Text(
                                 text = "🔥",
-                                fontSize = 14.sp
+                                fontSize = 16.sp,
+                                fontFamily = FontFamily.Default
                             )
                             Text(
                                 text = "${streak}일 연속",
@@ -152,7 +153,8 @@ fun HabitCard(
                     ) {
                         Text(
                             text = "${(completionRate * 100).toInt()}%",
-                            style = CustomTypography.numberSmall,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
                             color = getCompletionColor(completionRate * 100)
                         )
 
@@ -221,6 +223,9 @@ fun SimpleHabitCard(
     onCheck: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // ✅ 아이콘 변환 적용
+    val displayIcon = IconConverter.convertToEmoji(habitIcon)
+
     val scale by animateFloatAsState(
         targetValue = if (isCompleted) 1.02f else 1f,
         animationSpec = spring(
@@ -261,8 +266,9 @@ fun SimpleHabitCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = habitIcon,
-                    fontSize = 20.sp
+                    text = displayIcon,
+                    fontSize = 24.sp,
+                    fontFamily = FontFamily.Default
                 )
 
                 Text(
@@ -274,7 +280,7 @@ fun SimpleHabitCard(
             }
 
             Icon(
-                imageVector = if (isCompleted) Icons.Default.Check else Icons.Default.Circle,
+                imageVector = if (isCompleted) Icons.Default.Check else Icons.Default.RadioButtonUnchecked,
                 contentDescription = if (isCompleted) "완료" else "미완료",
                 tint = if (isCompleted) OrangePrimary else Color.LightGray,
                 modifier = Modifier.size(24.dp)

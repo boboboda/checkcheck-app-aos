@@ -5,20 +5,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.buyoungsil.checkcheck.feature.task.domain.model.Task
+import com.buyoungsil.checkcheck.core.ui.components.OrangeFAB
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
-import java.time.format.DateTimeFormatter
+import com.buyoungsil.checkcheck.ui.theme.*
 
+/**
+ * 🧡 할일 목록 화면 - MZ 오렌지 테마
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListScreen(
@@ -26,17 +27,32 @@ fun TaskListScreen(
     onNavigateToCreate: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("그룹 할일") }
+                title = {
+                    Text(
+                        text = "그룹 할일",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryLight
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = OrangeBackground,
+                    titleContentColor = TextPrimaryLight
+                )
             )
         },
+        containerColor = OrangeBackground,
         floatingActionButton = {
-            FloatingActionButton(onClick = onNavigateToCreate) {
-                Icon(Icons.Default.Add, "할일 추가")
-            }
+            OrangeFAB(
+                onClick = onNavigateToCreate,
+                icon = Icons.Default.Add,
+                contentDescription = "할일 추가"
+            )
         }
     ) { padding ->
         Box(
@@ -46,116 +62,354 @@ fun TaskListScreen(
         ) {
             when {
                 uiState.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    // 로딩
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                color = OrangePrimary,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Text(
+                                text = "불러오는 중...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondaryLight
+                            )
+                        }
+                    }
                 }
 
                 uiState.error != null -> {
+                    // 에러
                     Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = uiState.error ?: "오류",
-                            color = MaterialTheme.colorScheme.error
+                            text = "😢",
+                            fontSize = 64.sp
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.onRetry() }) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = uiState.error ?: "오류가 발생했어요",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimaryLight
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "다시 시도해주세요",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondaryLight
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(
+                            onClick = { viewModel.onRetry() },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = OrangePrimary
+                            )
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text("다시 시도")
                         }
                     }
                 }
 
                 uiState.tasks.isEmpty() -> {
+                    // 빈 상태
                     Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Text(
+                            text = "✅",
+                            fontSize = 80.sp
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
                             text = "아직 할일이 없어요",
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimaryLight
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "첫 할일을 만들어보세요!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = TextSecondaryLight
                         )
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Button(
+                            onClick = onNavigateToCreate,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = OrangePrimary
+                            )
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("할일 추가하기")
+                        }
                     }
                 }
 
                 else -> {
+                    // 할일 목록
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // ✅ 상태별 그룹핑 추가
+                        // 상태별 그룹핑
                         val pendingTasks = uiState.tasks.filter { it.status == TaskStatus.PENDING }
                         val inProgressTasks = uiState.tasks.filter { it.status == TaskStatus.IN_PROGRESS }
                         val completedTasks = uiState.tasks.filter { it.status == TaskStatus.COMPLETED }
 
-                        // 진행 중
+                        // 헤더
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = ComponentShapes.TaskCard,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = androidx.compose.ui.graphics.Color.White
+                                ),
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 2.dp
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "✅ 총 ${uiState.tasks.size}개의 할일",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimaryLight
+                                    )
+
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        StatusChip(
+                                            label = "진행중",
+                                            count = inProgressTasks.size,
+                                            color = OrangePrimary
+                                        )
+                                        StatusChip(
+                                            label = "대기",
+                                            count = pendingTasks.size,
+                                            color = WarningAmber
+                                        )
+                                        StatusChip(
+                                            label = "완료",
+                                            count = completedTasks.size,
+                                            color = SuccessOrange
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // 🔄 진행 중
                         if (inProgressTasks.isNotEmpty()) {
                             item {
-                                Text(
-                                    text = "🔄 진행 중",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+                                SectionHeader(
+                                    icon = "🔄",
+                                    title = "진행 중",
+                                    count = inProgressTasks.size
                                 )
                             }
-                            items(inProgressTasks) { task ->
+                            items(
+                                items = inProgressTasks,
+                                key = { it.id }
+                            ) { task ->
                                 TaskCard(
-                                    task = task,
-                                    onComplete = { viewModel.onCompleteTask(task.id) },
-                                    onDelete = { viewModel.onDeleteTask(task.id) }
+                                    taskName = task.title,
+                                    isCompleted = task.status == TaskStatus.COMPLETED,
+                                    priority = task.priority.name.lowercase(),
+                                    dueDate = task.dueDate,
+                                    assignee = task.assigneeName,
+                                    onCheck = { viewModel.onCompleteTask(task.id) }
                                 )
                             }
                             item { Spacer(modifier = Modifier.height(8.dp)) }
                         }
 
-                        // 대기 중
+                        // ⏰ 대기 중
                         if (pendingTasks.isNotEmpty()) {
                             item {
-                                Text(
-                                    text = "📋 대기 중",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                SectionHeader(
+                                    icon = "⏰",
+                                    title = "대기 중",
+                                    count = pendingTasks.size
                                 )
                             }
-                            items(pendingTasks) { task ->
+                            items(
+                                items = pendingTasks,
+                                key = { it.id }
+                            ) { task ->
                                 TaskCard(
-                                    task = task,
-                                    onComplete = { viewModel.onCompleteTask(task.id) },
-                                    onDelete = { viewModel.onDeleteTask(task.id) }
+                                    taskName = task.title,
+                                    isCompleted = task.status == TaskStatus.COMPLETED,
+                                    priority = task.priority.name.lowercase(),
+                                    dueDate = task.dueDate,
+                                    assignee = task.assigneeName,
+                                    onCheck = { viewModel.onCompleteTask(task.id) }
                                 )
                             }
                             item { Spacer(modifier = Modifier.height(8.dp)) }
                         }
 
-                        // 완료
+                        // ✅ 완료
                         if (completedTasks.isNotEmpty()) {
                             item {
-                                Text(
-                                    text = "✅ 완료",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.tertiary
+                                SectionHeader(
+                                    icon = "✅",
+                                    title = "완료",
+                                    count = completedTasks.size
                                 )
                             }
-                            items(completedTasks) { task ->
+                            items(
+                                items = completedTasks,
+                                key = { it.id }
+                            ) { task ->
                                 TaskCard(
-                                    task = task,
-                                    onComplete = { viewModel.onCompleteTask(task.id) },
-                                    onDelete = { viewModel.onDeleteTask(task.id) }
+                                    taskName = task.title,
+                                    isCompleted = true,
+                                    priority = task.priority.name.lowercase(),
+                                    dueDate = task.dueDate,
+                                    assignee = task.assigneeName,
+                                    onCheck = { viewModel.onCompleteTask(task.id) }
                                 )
                             }
+                        }
+
+                        // 하단 여백
+                        item {
+                            Spacer(modifier = Modifier.height(80.dp))
                         }
                     }
                 }
             }
+        }
+    }
+
+    // 삭제 확인 다이얼로그
+    showDeleteDialog?.let { taskId ->
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            title = {
+                Text(
+                    text = "할일 삭제",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text("정말 이 할일을 삭제하시겠어요?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onDeleteTask(taskId)
+                        showDeleteDialog = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = ErrorRed
+                    )
+                ) {
+                    Text(
+                        text = "삭제",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = null }
+                ) {
+                    Text("취소")
+                }
+            }
+        )
+    }
+}
+
+/**
+ * 📌 섹션 헤더
+ */
+@Composable
+private fun SectionHeader(
+    icon: String,
+    title: String,
+    count: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = icon,
+            fontSize = 20.sp
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimaryLight
+        )
+        Text(
+            text = "($count)",
+            style = MaterialTheme.typography.bodyLarge,
+            color = TextSecondaryLight
+        )
+    }
+}
+
+/**
+ * 상태 칩
+ */
+@Composable
+private fun StatusChip(
+    label: String,
+    count: Int,
+    color: androidx.compose.ui.graphics.Color
+) {
+    Surface(
+        shape = ComponentShapes.Chip,
+        color = color.copy(alpha = 0.15f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = color
+            )
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
         }
     }
 }
