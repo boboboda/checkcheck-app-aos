@@ -20,6 +20,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import javax.inject.Inject
 
 /**
@@ -27,6 +30,7 @@ import javax.inject.Inject
  *
  * ✅ Hilt를 통한 의존성 주입
  * ✅ 토큰 자동 저장
+ * ✅ task_created 알림 수신 시 WorkManager 등록
  */
 @AndroidEntryPoint
 class CheckCheckMessagingService : FirebaseMessagingService() {
@@ -36,6 +40,9 @@ class CheckCheckMessagingService : FirebaseMessagingService() {
 
     @Inject
     lateinit var auth: FirebaseAuth
+
+    @Inject
+    lateinit var taskReminderScheduler: TaskReminderScheduler  // ✅ 추가
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -79,6 +86,12 @@ class CheckCheckMessagingService : FirebaseMessagingService() {
         Log.d(TAG, "   From: ${remoteMessage.from}")
         Log.d(TAG, "   Data: ${remoteMessage.data}")
 
+        // ✅ task_created 타입인 경우 WorkManager 등록
+        val messageType = remoteMessage.data["type"]
+        if (messageType == "task_created") {
+            handleTaskCreatedNotification(remoteMessage.data)
+        }
+
         // 알림 채널 생성
         createNotificationChannel()
 
@@ -92,6 +105,48 @@ class CheckCheckMessagingService : FirebaseMessagingService() {
             ?: "새 알림이 도착했습니다"
 
         showNotification(title, body, remoteMessage.data)
+    }
+
+    /**
+     * ✅ 할일 생성 알림 처리 - WorkManager 등록
+     */
+    private fun handleTaskCreatedNotification(data: Map<String, String>) {
+        try {
+            val taskId = data["taskId"] ?: return
+            val taskTitle = data["taskTitle"] ?: return
+            val groupName = data["groupName"] ?: "그룹"
+            val dueDateStr = data["dueDate"] ?: return  // "2025-11-15"
+            val dueTimeStr = data["dueTime"]  // "14:30" or null
+            val reminderEnabled = data["reminderEnabled"]?.toBoolean() ?: false
+            val reminderMinutesBefore = data["reminderMinutesBefore"]?.toInt() ?: 60
+
+            if (!reminderEnabled) {
+                Log.d(TAG, "⏭️ 알림 비활성화 상태 - WorkManager 등록 건너뜀")
+                return
+            }
+
+            // LocalDateTime 생성
+            val dueDate = LocalDate.parse(dueDateStr)
+            val dueTime = if (dueTimeStr != null) {
+                LocalTime.parse(dueTimeStr)
+            } else {
+                LocalTime.of(23, 59)
+            }
+            val dueDateTime = LocalDateTime.of(dueDate, dueTime)
+
+            // WorkManager 등록
+            taskReminderScheduler.scheduleTaskReminder(
+                taskId = taskId,
+                taskTitle = taskTitle,
+                groupName = groupName,
+                dueDateTime = dueDateTime,
+                minutesBefore = reminderMinutesBefore
+            )
+
+            Log.d(TAG, "✅ WorkManager 등록 완료: $taskTitle (${reminderMinutesBefore}분 전)")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ WorkManager 등록 실패", e)
+        }
     }
 
     /**

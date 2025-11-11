@@ -1,5 +1,6 @@
 package com.buyoungsil.checkcheck.feature.task.presentation.create
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -24,6 +25,7 @@ import javax.inject.Inject
 /**
  * 할일 생성 ViewModel
  * ✅ 알림 설정 함수 추가
+ * ✅ 로그 추가
  */
 @HiltViewModel
 class CreateTaskViewModel @Inject constructor(
@@ -33,6 +35,10 @@ class CreateTaskViewModel @Inject constructor(
     private val authManager: FirebaseAuthManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    companion object {
+        private const val TAG = "CreateTaskViewModel"
+    }
 
     private val groupId: String = savedStateHandle.get<String>("groupId") ?: ""
 
@@ -80,12 +86,10 @@ class CreateTaskViewModel @Inject constructor(
         _uiState.update { it.copy(dueTime = time) }
     }
 
-    // ✅ 알림 활성화 토글
     fun onReminderEnabledChange(enabled: Boolean) {
         _uiState.update { it.copy(reminderEnabled = enabled) }
     }
 
-    // ✅ 알림 시간 변경
     fun onReminderMinutesChange(minutes: Int) {
         _uiState.update { it.copy(reminderMinutesBefore = minutes) }
     }
@@ -106,6 +110,13 @@ class CreateTaskViewModel @Inject constructor(
             _uiState.update { it.copy(error = "할일 제목을 입력해주세요") }
             return
         }
+
+        Log.d(TAG, "=== 할일 생성 시작 ===")
+        Log.d(TAG, "title: ${currentState.title}")
+        Log.d(TAG, "dueDate: ${currentState.dueDate}")
+        Log.d(TAG, "dueTime: ${currentState.dueTime}")
+        Log.d(TAG, "reminderEnabled: ${currentState.reminderEnabled}")
+        Log.d(TAG, "reminderMinutesBefore: ${currentState.reminderMinutesBefore}")
 
         viewModelScope.launch {
             _uiState.update { it.copy(loading = true, error = null) }
@@ -128,6 +139,8 @@ class CreateTaskViewModel @Inject constructor(
 
             createTaskUseCase(task)
                 .onSuccess { createdTask ->
+                    Log.d(TAG, "✅ Task 생성 성공: ${createdTask.id}")
+
                     // ✅ 알림 스케줄 설정
                     if (createdTask.reminderEnabled && createdTask.dueDate != null) {
                         val dueDateTime = LocalDateTime.of(
@@ -137,6 +150,13 @@ class CreateTaskViewModel @Inject constructor(
 
                         val groupName = currentState.selectedGroup?.name ?: "그룹"
 
+                        Log.d(TAG, "📅 WorkManager 등록 시작")
+                        Log.d(TAG, "  - taskId: ${createdTask.id}")
+                        Log.d(TAG, "  - taskTitle: ${createdTask.title}")
+                        Log.d(TAG, "  - groupName: $groupName")
+                        Log.d(TAG, "  - dueDateTime: $dueDateTime")
+                        Log.d(TAG, "  - minutesBefore: ${createdTask.reminderMinutesBefore}")
+
                         taskReminderScheduler.scheduleTaskReminder(
                             taskId = createdTask.id,
                             taskTitle = createdTask.title,
@@ -144,6 +164,10 @@ class CreateTaskViewModel @Inject constructor(
                             dueDateTime = dueDateTime,
                             minutesBefore = createdTask.reminderMinutesBefore
                         )
+
+                        Log.d(TAG, "✅ WorkManager 등록 완료 (본인)")
+                    } else {
+                        Log.d(TAG, "⏭️ 알림 비활성화 또는 마감일 없음 - WorkManager 등록 건너뜀")
                     }
 
                     _uiState.update {
@@ -154,6 +178,7 @@ class CreateTaskViewModel @Inject constructor(
                     }
                 }
                 .onFailure { error ->
+                    Log.e(TAG, "❌ Task 생성 실패", error)
                     _uiState.update {
                         it.copy(
                             loading = false,
@@ -163,5 +188,4 @@ class CreateTaskViewModel @Inject constructor(
                 }
         }
     }
-
 }

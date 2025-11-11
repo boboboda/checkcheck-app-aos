@@ -12,7 +12,6 @@ import com.google.firebase.FirebaseApp
 import com.kakao.sdk.common.KakaoSdk
 import dagger.hilt.android.HiltAndroidApp
 import java.security.MessageDigest
-import javax.inject.Inject
 
 @HiltAndroidApp
 class CheckCheckApplication : Application() {
@@ -22,9 +21,6 @@ class CheckCheckApplication : Application() {
 
         // ✅ 키 해시 출력 (개발용)
         printKeyHash()
-
-        @Inject
-        lateinit var taskReminderInitializer: TaskReminderInitializer
 
         // Firebase 초기화
         try {
