@@ -8,8 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,11 +24,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.buyoungsil.checkcheck.ui.theme.*
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
 /**
  * 🧡 오렌지 테마 할일 카드
- * 우선순위 시각화 + D-day 표시
+ * ✅ 마감 시간, 알림 설정 표시 추가
  */
 @Composable
 fun TaskCard(
@@ -37,6 +38,8 @@ fun TaskCard(
     isCompleted: Boolean,
     priority: String = "medium",
     dueDate: LocalDate? = null,
+    dueTime: LocalTime? = null,  // ✅ 추가
+    reminderMinutes: Int? = null,  // ✅ 추가
     assignee: String? = null,
     taskIcon: String = "📋",
     onCheck: () -> Unit,
@@ -107,46 +110,28 @@ fun TaskCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 왼쪽: 아이콘 + 할일명 + 담당자
+                    // 왼쪽: 할일명
                     Row(
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // 아이콘
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(ComponentShapes.IconBackground)
-                                .background(
-                                    if (isCompleted) {
-                                        OrangeSurfaceVariant
-                                    } else {
-                                        priorityColor.copy(alpha = 0.15f)
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = taskIcon,
-                                fontSize = 20.sp
-                            )
-                        }
+                        Text(
+                            text = taskIcon,
+                            fontSize = 20.sp
+                        )
 
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            // 할일명
+                        Column {
                             Text(
                                 text = taskName,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = if (isCompleted) FontWeight.Normal else FontWeight.SemiBold,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (isCompleted) FontWeight.Normal else FontWeight.Bold,
                                 color = if (isCompleted) TextSecondaryLight else TextPrimaryLight,
                                 textDecoration = if (isCompleted) TextDecoration.LineThrough else null
                             )
 
                             // 담당자 표시
-                            if (assignee != null) {
+                            if (assignee != null && !isCompleted) {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "👤 $assignee",
@@ -157,7 +142,7 @@ fun TaskCard(
                         }
                     }
 
-                    // 오른쪽: 체크박스
+                    // 오른쪽: 체크 버튼
                     Box(
                         modifier = Modifier
                             .size(32.dp)
@@ -187,13 +172,13 @@ fun TaskCard(
                     }
                 }
 
-                // 하단: 우선순위 + D-day
-                if (!isCompleted && (dueDate != null || priority.lowercase() != "low")) {
+                // 하단: 상세 정보 (완료 안된 것만)
+                if (!isCompleted) {
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // 우선순위 뱃지
@@ -206,11 +191,11 @@ fun TaskCard(
                                 style = CustomTypography.chip,
                                 fontWeight = FontWeight.Bold,
                                 color = priorityColor,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
 
-                        // D-day 표시
+                        // 마감일 + 시간
                         if (dueDate != null) {
                             Surface(
                                 shape = ComponentShapes.Badge,
@@ -221,7 +206,7 @@ fun TaskCard(
                                 }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -234,10 +219,17 @@ fun TaskCard(
                                         fontSize = 12.sp
                                     )
                                     Text(
-                                        text = when {
-                                            daysUntilDue == 0 -> "오늘"
-                                            isOverdue -> "${-daysUntilDue}일 지남"
-                                            else -> "D-$daysUntilDue"
+                                        text = buildString {
+                                            // 날짜
+                                            append(when {
+                                                daysUntilDue == 0 -> "오늘"
+                                                isOverdue -> "${-daysUntilDue!!}일 지남"
+                                                else -> "D-$daysUntilDue"
+                                            })
+                                            // 시간
+                                            if (dueTime != null) {
+                                                append(" ${dueTime.format(DateTimeFormatter.ofPattern("HH:mm"))}")
+                                            }
                                         },
                                         style = CustomTypography.chip,
                                         fontWeight = FontWeight.Bold,
@@ -250,6 +242,37 @@ fun TaskCard(
                                 }
                             }
                         }
+
+                        // 알림 설정 표시
+                        if (reminderMinutes != null && reminderMinutes > 0) {
+                            Surface(
+                                shape = ComponentShapes.Badge,
+                                color = OrangePrimary.copy(alpha = 0.15f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Notifications,
+                                        contentDescription = null,
+                                        tint = OrangePrimary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = when {
+                                            reminderMinutes >= 1440 -> "${reminderMinutes / 1440}일 전"
+                                            reminderMinutes >= 60 -> "${reminderMinutes / 60}시간 전"
+                                            else -> "${reminderMinutes}분 전"
+                                        },
+                                        style = CustomTypography.chip,
+                                        fontWeight = FontWeight.Bold,
+                                        color = OrangePrimary
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -258,7 +281,19 @@ fun TaskCard(
 }
 
 /**
- * 🧡 간단한 할일 카드
+ * 우선순위 한글명 반환
+ */
+private fun getPriorityName(priority: String): String {
+    return when (priority.lowercase()) {
+        "urgent" -> "🚨 긴급"
+        "normal" -> "📌 보통"
+        "low" -> "💡 나중"
+        else -> "📌 보통"
+    }
+}
+
+/**
+ * 🧡 간단한 할일 카드 (홈 화면용)
  */
 @Composable
 fun SimpleTaskCard(
@@ -328,17 +363,5 @@ fun SimpleTaskCard(
                 modifier = Modifier.size(24.dp)
             )
         }
-    }
-}
-
-/**
- * 우선순위 한글명 반환
- */
-private fun getPriorityName(priority: String): String {
-    return when (priority.lowercase()) {
-        "urgent" -> "🔥 긴급"
-        "high" -> "⚡ 높음"
-        "medium" -> "📌 보통"
-        else -> "⏰ 낮음"
     }
 }

@@ -303,6 +303,7 @@ fun SimpleGroupCard(
  */
 private fun getGroupTypeName(type: String): String {
     return when (type.lowercase()) {
+        "personal" -> "나만의 공간"  // ✅ 이 줄 추가
         "family" -> "가족"
         "couple" -> "연인"
         "study" -> "스터디"

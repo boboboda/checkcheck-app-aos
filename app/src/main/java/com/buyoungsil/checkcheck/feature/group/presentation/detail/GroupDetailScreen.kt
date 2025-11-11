@@ -89,7 +89,8 @@ fun GroupDetailScreen(
                             expanded = showOptionsMenu,
                             onDismissRequest = { showOptionsMenu = false },
                             offset = DpOffset(0.dp, 0.dp)
-                        ) {
+                        )
+                        {
                             DropdownMenuItem(
                                 text = { Text("초대하기") },
                                 onClick = {
@@ -277,6 +278,8 @@ fun GroupDetailScreen(
                                     isCompleted = task.status == TaskStatus.COMPLETED,
                                     priority = task.priority.name.lowercase(),
                                     dueDate = task.dueDate,
+                                    dueTime = task.dueTime,  // ✅ 추가
+                                    reminderMinutes = if (task.reminderEnabled) task.reminderMinutesBefore else null,  // ✅ 추가
                                     assignee = task.assigneeName,
                                     onCheck = { viewModel.onCompleteTask(task.id) }
                                 )

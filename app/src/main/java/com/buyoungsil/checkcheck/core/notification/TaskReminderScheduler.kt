@@ -1,6 +1,7 @@
 package com.buyoungsil.checkcheck.core.notification
 
 import android.content.Context
+import android.util.Log
 import androidx.work.*
 import com.buyoungsil.checkcheck.core.notification.worker.TaskReminderWorker
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -21,6 +22,9 @@ class TaskReminderScheduler @Inject constructor(
 
     private val workManager = WorkManager.getInstance(context)
 
+    companion object {
+        private const val TAG = "TaskReminderScheduler"
+    }
     /**
      * 할일 알림 스케줄 설정
      */
@@ -31,16 +35,30 @@ class TaskReminderScheduler @Inject constructor(
         dueDateTime: LocalDateTime,
         minutesBefore: Int = 60
     ) {
+        Log.d(TAG, "========================================")
+        Log.d(TAG, "📅 WorkManager 스케줄링 시작")
+        Log.d(TAG, "  - taskId: $taskId")
+        Log.d(TAG, "  - taskTitle: $taskTitle")
+        Log.d(TAG, "  - groupName: $groupName")
+        Log.d(TAG, "  - dueDateTime: $dueDateTime")
+        Log.d(TAG, "  - minutesBefore: $minutesBefore")
+
         // 알림 시간 계산
         val reminderTime = dueDateTime.minusMinutes(minutesBefore.toLong())
         val now = LocalDateTime.now()
 
+        Log.d("TaskReminderScheduler", "  - 현재 시간: $now")
+        Log.d("TaskReminderScheduler", "  - 알림 시간: $reminderTime")
+
         // 이미 지난 시간이면 스케줄 안 함
         if (reminderTime.isBefore(now) || reminderTime.isEqual(now)) {
+            Log.w("TaskReminderScheduler", "⚠️ 알림 시간이 이미 지남 - 스케줄 안 함")
+            Log.d("TaskReminderScheduler", "========================================")
             return
         }
 
         val delay = Duration.between(now, reminderTime)
+        Log.d("TaskReminderScheduler", "  - 지연 시간: ${delay.toMinutes()}분 (${delay.seconds}초)")
 
         // WorkManager 설정
         val workRequest = OneTimeWorkRequestBuilder<TaskReminderWorker>()
@@ -64,6 +82,9 @@ class TaskReminderScheduler @Inject constructor(
         // 기존 작업 취소 후 새로 등록
         workManager.cancelAllWorkByTag(getWorkTag(taskId))
         workManager.enqueue(workRequest)
+
+        Log.d("TaskReminderScheduler", "✅ WorkManager 등록 완료!")
+        Log.d("TaskReminderScheduler", "========================================")
     }
 
     /**
