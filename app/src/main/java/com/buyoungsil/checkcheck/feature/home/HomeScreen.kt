@@ -32,6 +32,7 @@ import com.buyoungsil.checkcheck.feature.task.domain.model.TaskPriority
 import com.buyoungsil.checkcheck.ui.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 /**
@@ -643,7 +644,7 @@ private fun getTodayDate(): String {
 }
 
 /**
- * 긴급 할일 섹션
+ * ✅ 긴급 할일 섹션 - 플랫 디자인으로 수정
  */
 @Composable
 private fun UrgentTasksSection(
@@ -656,8 +657,8 @@ private fun UrgentTasksSection(
         colors = CardDefaults.cardColors(
             containerColor = ErrorRed.copy(alpha = 0.08f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, ErrorRed.copy(alpha = 0.3f))
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp), // ✅ 0으로 변경
+        border = null // ✅ 테두리 제거
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -710,7 +711,7 @@ private fun UrgentTasksSection(
 }
 
 /**
- * 긴급 할일 아이템
+ * ✅ 긴급 할일 아이템 - 플랫 디자인
  */
 @Composable
 private fun UrgentTaskItem(
@@ -727,18 +728,12 @@ private fun UrgentTaskItem(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 우선순위 아이콘
+        // 우선순위 아이콘 (플랫하게)
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(
-                    when (task.priority) {
-                        TaskPriority.URGENT -> ErrorRed.copy(alpha = 0.15f)
-                        TaskPriority.NORMAL -> OrangePrimary.copy(alpha = 0.15f)
-                        TaskPriority.LOW -> TextSecondaryLight.copy(alpha = 0.15f)
-                    }
-                ),
+                .background(ErrorRed.copy(alpha = 0.15f)), // ✅ 단순 배경색
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -764,47 +759,27 @@ private fun UrgentTaskItem(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 마감일
-                if (task.dueDate != null) {
-                    val isToday = task.dueDate == LocalDate.now()
-                    val isTomorrow = task.dueDate == LocalDate.now().plusDays(1)
-                    val dateText = when {
-                        isToday -> "오늘"
-                        isTomorrow -> "내일"
-                        else -> task.dueDate.format(DateTimeFormatter.ofPattern("M/d"))
-                    }
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                // D-day
+                task.dueDate?.let { dueDate ->
+                    val daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), dueDate).toInt()
+                    Surface(
+                        shape = ComponentShapes.Chip,
+                        color = when {
+                            daysUntil < 0 -> ErrorRed.copy(alpha = 0.15f)
+                            daysUntil == 0 -> WarningAmber.copy(alpha = 0.15f)
+                            else -> ErrorRed.copy(alpha = 0.1f)
+                        }
                     ) {
                         Text(
-                            text = "📅",
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            text = dateText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (isToday) ErrorRed else TextSecondaryLight,
-                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-
-                // 담당자
-                if (task.assigneeName != null) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "👤",
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            text = task.assigneeName,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondaryLight
+                            text = when {
+                                daysUntil < 0 -> "마감 초과"
+                                daysUntil == 0 -> "오늘 마감"
+                                else -> "D-$daysUntil"
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = ErrorRed,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
                 }
@@ -815,7 +790,7 @@ private fun UrgentTaskItem(
         Icon(
             imageVector = Icons.Default.ChevronRight,
             contentDescription = null,
-            tint = TextSecondaryLight.copy(alpha = 0.5f)
+            tint = TextSecondaryLight
         )
     }
 }

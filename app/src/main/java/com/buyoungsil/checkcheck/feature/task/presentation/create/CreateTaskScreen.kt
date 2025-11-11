@@ -301,6 +301,97 @@ fun CreateTaskScreen(
                 }
             }
 
+            if (uiState.dueTime != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = ComponentShapes.TaskCard,
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Notifications,
+                                    contentDescription = null,
+                                    tint = OrangePrimary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "마감 전 알림",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimaryLight
+                                )
+                            }
+                            Switch(
+                                checked = uiState.reminderEnabled,
+                                onCheckedChange = { viewModel.onReminderEnabledChange(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = androidx.compose.ui.graphics.Color.White,
+                                    checkedTrackColor = OrangePrimary,
+                                    uncheckedThumbColor = androidx.compose.ui.graphics.Color.White,
+                                    uncheckedTrackColor = TextSecondaryLight
+                                )
+                            )
+                        }
+
+                        if (uiState.reminderEnabled) {
+                            var showReminderDialog by remember { mutableStateOf(false) }
+
+                            OutlinedCard(
+                                onClick = { showReminderDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.outlinedCardColors(
+                                    containerColor = OrangeSurfaceVariant
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = getReminderText(uiState.reminderMinutesBefore),
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = OrangePrimary
+                                    )
+                                    Icon(
+                                        Icons.Default.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        tint = OrangePrimary
+                                    )
+                                }
+                            }
+
+                            if (showReminderDialog) {
+                                ReminderPickerDialog(
+                                    currentMinutes = uiState.reminderMinutesBefore,
+                                    onMinutesSelected = { minutes ->
+                                        viewModel.onReminderMinutesChange(minutes)
+                                        showReminderDialog = false
+                                    },
+                                    onDismiss = { showReminderDialog = false }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+
 // 담당자 선택
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -385,7 +476,7 @@ fun CreateTaskScreen(
             // 생성 버튼
             OrangeGradientButton(
                 text = if (uiState.loading) "생성 중..." else "할일 만들기",
-                onClick = { viewModel.onCreateTask() },
+                onClick = { viewModel.createTask() },
                 enabled = !uiState.loading && uiState.title.isNotBlank(),
                 icon = Icons.Default.Add
             )
@@ -658,3 +749,93 @@ private fun AssigneePickerDialog(
     )
 }
 
+
+// ✅✅✅ 여기부터 복사해서 파일 맨 아래에 붙여넣기 ✅✅✅
+
+/**
+ * 알림 시간 텍스트
+ */
+private fun getReminderText(minutes: Int): String {
+    return when (minutes) {
+        10 -> "10분 전"
+        30 -> "30분 전"
+        60 -> "1시간 전"
+        120 -> "2시간 전"
+        1440 -> "하루 전"
+        else -> "${minutes}분 전"
+    }
+}
+
+/**
+ * 알림 시간 선택 다이얼로그
+ */
+@Composable
+private fun ReminderPickerDialog(
+    currentMinutes: Int,
+    onMinutesSelected: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val reminderOptions = listOf(
+        10 to "10분 전",
+        30 to "30분 전",
+        60 to "1시간 전",
+        120 to "2시간 전",
+        1440 to "하루 전"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("알림 시간 선택", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                reminderOptions.forEach { (minutes, label) ->
+                    OutlinedCard(
+                        onClick = { onMinutesSelected(minutes) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.outlinedCardColors(
+                            containerColor = if (minutes == currentMinutes) {
+                                OrangeSurfaceVariant
+                            } else {
+                                androidx.compose.ui.graphics.Color.White
+                            }
+                        ),
+                        border = if (minutes == currentMinutes) {
+                            CardDefaults.outlinedCardBorder().copy(
+                                brush = androidx.compose.ui.graphics.SolidColor(OrangePrimary)
+                            )
+                        } else {
+                            CardDefaults.outlinedCardBorder()
+                        }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = label,
+                                fontWeight = if (minutes == currentMinutes) FontWeight.Bold else FontWeight.Normal,
+                                color = if (minutes == currentMinutes) OrangePrimary else TextPrimaryLight
+                            )
+                            if (minutes == currentMinutes) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = "선택됨",
+                                    tint = OrangePrimary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            OrangeTextButton(
+                text = "닫기",
+                onClick = onDismiss
+            )
+        }
+    )
+}

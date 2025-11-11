@@ -23,7 +23,7 @@ import javax.inject.Inject
 
 /**
  * 할일 생성 ViewModel
- * ✅ 완전 수정: Result 처리 및 알림 스케줄링
+ * ✅ 알림 설정 함수 추가
  */
 @HiltViewModel
 class CreateTaskViewModel @Inject constructor(
@@ -39,7 +39,6 @@ class CreateTaskViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CreateTaskUiState())
     val uiState: StateFlow<CreateTaskUiState> = _uiState.asStateFlow()
 
-    // ✅ private 제거
     val currentUserId: String
         get() = authManager.currentUserId ?: "anonymous"
 
@@ -49,7 +48,6 @@ class CreateTaskViewModel @Inject constructor(
 
     private fun loadGroup() {
         viewModelScope.launch {
-            // ✅ Result 처리
             getGroupByIdUseCase(groupId)
                 .onSuccess { group ->
                     _uiState.update { it.copy(selectedGroup = group) }
@@ -82,14 +80,14 @@ class CreateTaskViewModel @Inject constructor(
         _uiState.update { it.copy(dueTime = time) }
     }
 
-    // ✅ 알림 설정 변경
-    fun onReminderChange(enabled: Boolean, minutesBefore: Int) {
-        _uiState.update {
-            it.copy(
-                reminderEnabled = enabled,
-                reminderMinutesBefore = minutesBefore
-            )
-        }
+    // ✅ 알림 활성화 토글
+    fun onReminderEnabledChange(enabled: Boolean) {
+        _uiState.update { it.copy(reminderEnabled = enabled) }
+    }
+
+    // ✅ 알림 시간 변경
+    fun onReminderMinutesChange(minutes: Int) {
+        _uiState.update { it.copy(reminderMinutesBefore = minutes) }
     }
 
     fun onAssigneeChange(assigneeId: String?, assigneeName: String?) {
@@ -101,7 +99,7 @@ class CreateTaskViewModel @Inject constructor(
         }
     }
 
-    fun onCreateTask() {
+    fun createTask() {
         val currentState = _uiState.value
 
         if (currentState.title.isBlank()) {
@@ -165,4 +163,5 @@ class CreateTaskViewModel @Inject constructor(
                 }
         }
     }
+
 }
