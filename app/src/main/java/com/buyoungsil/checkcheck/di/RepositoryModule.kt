@@ -1,6 +1,8 @@
 package com.buyoungsil.checkcheck.di
 
 import com.buyoungsil.checkcheck.feature.group.data.repository.GroupFirestoreRepository
+import com.buyoungsil.checkcheck.feature.group.data.repository.GroupMemberFirestoreRepository
+import com.buyoungsil.checkcheck.feature.group.domain.repository.GroupMemberRepository
 import com.buyoungsil.checkcheck.feature.group.domain.repository.GroupRepository
 import com.buyoungsil.checkcheck.feature.habit.data.repository.HabitFirestoreRepository
 import com.buyoungsil.checkcheck.feature.habit.domain.repository.HabitRepository
@@ -42,4 +44,11 @@ abstract class RepositoryModule {
     abstract fun bindTaskRepository(
         taskFirestoreRepository: TaskFirestoreRepository
     ): TaskRepository
+
+    // ✅ 추가
+    @Binds
+    @Singleton
+    abstract fun bindGroupMemberRepository(
+        groupMemberFirestoreRepository: GroupMemberFirestoreRepository
+    ): GroupMemberRepository
 }

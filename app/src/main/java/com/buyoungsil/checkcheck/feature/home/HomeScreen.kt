@@ -29,6 +29,8 @@ import com.buyoungsil.checkcheck.feature.group.domain.model.Group
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
 import com.buyoungsil.checkcheck.feature.task.domain.model.Task
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskPriority
+import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
+import com.buyoungsil.checkcheck.feature.task.presentation.list.TaskCard
 import com.buyoungsil.checkcheck.ui.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -46,7 +48,8 @@ fun HomeScreen(
     onNavigateToGroupList: () -> Unit,
     onNavigateToGroupDetail: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToHabitList: () -> Unit  // ✅ 추가
+    onNavigateToHabitList: () -> Unit,  // ✅ 추가
+    onNavigateToPersonalTaskCreate: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
@@ -251,6 +254,112 @@ fun HomeScreen(
                                             onDelete = { showDeleteDialog = habitWithStats.habit.id }
                                         )
                                     }
+                                )
+                            }
+                        }
+
+                        // HomeScreen.kt에 개인 할일 섹션 추가
+
+// LazyColumn 내부에 추가
+// "긴급 할일" 섹션 다음에 배치
+
+// ✅ 개인 할일 섹션
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "📝",
+                                        fontSize = 24.sp
+                                    )
+                                    Text(
+                                        text = "내 할일",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimaryLight
+                                    )
+                                    if (uiState.personalTasks.isNotEmpty()) {
+                                        Surface(
+                                            shape = ComponentShapes.Badge,
+                                            color = OrangePrimary.copy(alpha = 0.15f)
+                                        ) {
+                                            Text(
+                                                text = "${uiState.personalTasks.size}",
+                                                style = CustomTypography.chip,
+                                                fontWeight = FontWeight.Bold,
+                                                color = OrangePrimary,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // 할일 추가 버튼
+                                IconButton(
+                                    onClick = { onNavigateToPersonalTaskCreate() }  // ✅ 개인 할일 생성
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "할일 추가",
+                                        tint = OrangePrimary
+                                    )
+                                }
+                            }
+                        }
+
+                    // 개인 할일 목록
+                        if (uiState.personalTasks.isEmpty()) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = ComponentShapes.HabitCard,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color.White
+                                    ),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "📝",
+                                            fontSize = 32.sp
+                                        )
+                                        Text(
+                                            text = "개인 할일이 없어요",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = TextSecondaryLight
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            items(
+                                items = uiState.personalTasks.take(3),  // 최대 3개만 표시
+                                key = { it.id }
+                            ) { task ->
+                                TaskCard(
+                                    taskName = task.title,
+                                    isCompleted = task.status == TaskStatus.COMPLETED,
+                                    priority = task.priority.name.lowercase(),
+                                    dueDate = task.dueDate,
+                                    dueTime = task.dueTime,
+                                    reminderMinutes = if (task.reminderEnabled) task.reminderMinutesBefore else null,
+                                    assignee = task.assigneeName,
+                                    createdBy = task.createdBy,
+                                    currentUserId = viewModel.currentUserId,
+                                    onCheck = { /* TODO: 완료 처리 */ },
+                                    onDelete = { /* TODO: 삭제 */ }
                                 )
                             }
                         }

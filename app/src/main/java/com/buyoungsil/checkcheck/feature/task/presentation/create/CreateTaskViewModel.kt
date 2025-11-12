@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.core.notification.TaskReminderScheduler
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetGroupByIdUseCase
+import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetGroupMembersUseCase
 import com.buyoungsil.checkcheck.feature.task.domain.model.Task
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskPriority
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
@@ -24,13 +25,14 @@ import javax.inject.Inject
 
 /**
  * 할일 생성 ViewModel
- * ✅ 알림 설정 함수 추가
- * ✅ 로그 추가
+ * ✅ 개인 할일 지원 추가
+ * ✅ GroupMember 조회 추가
  */
 @HiltViewModel
 class CreateTaskViewModel @Inject constructor(
     private val createTaskUseCase: CreateTaskUseCase,
     private val getGroupByIdUseCase: GetGroupByIdUseCase,
+    private val getGroupMembersUseCase: GetGroupMembersUseCase,  // ✅ 추가
     private val taskReminderScheduler: TaskReminderScheduler,
     private val authManager: FirebaseAuthManager,
     savedStateHandle: SavedStateHandle
@@ -40,6 +42,7 @@ class CreateTaskViewModel @Inject constructor(
         private const val TAG = "CreateTaskViewModel"
     }
 
+    // ✅ groupId가 없을 수 있음 (개인 할일)
     private val groupId: String = savedStateHandle.get<String>("groupId") ?: ""
 
     private val _uiState = MutableStateFlow(CreateTaskUiState())
@@ -49,20 +52,42 @@ class CreateTaskViewModel @Inject constructor(
         get() = authManager.currentUserId ?: "anonymous"
 
     init {
-        loadGroup()
+        // ✅ groupId가 비어있지 않을 때만 그룹 로드
+        if (groupId.isNotEmpty()) {
+            loadGroup()
+            loadGroupMembers()  // ✅ 그룹 멤버 조회 추가
+        } else {
+            Log.d(TAG, "개인 할일 생성 모드")
+        }
     }
 
     private fun loadGroup() {
         viewModelScope.launch {
             getGroupByIdUseCase(groupId)
                 .onSuccess { group ->
+                    Log.d(TAG, "그룹 로드 성공: ${group.name}")
                     _uiState.update { it.copy(selectedGroup = group) }
                 }
                 .onFailure { error ->
+                    Log.e(TAG, "그룹 로드 실패: ${error.message}")
                     _uiState.update {
                         it.copy(error = error.message ?: "그룹 정보를 불러올 수 없습니다")
                     }
                 }
+        }
+    }
+
+    // ✅ GroupMember 조회 추가
+    private fun loadGroupMembers() {
+        viewModelScope.launch {
+            Log.d(TAG, "=== GroupMember 조회 시작 (groupId=$groupId) ===")
+            getGroupMembersUseCase(groupId).collect { members ->
+                Log.d(TAG, "✅ GroupMember 조회 완료: ${members.size}명")
+                members.forEach { member ->
+                    Log.d(TAG, "  - ${member.displayName} (${member.userId})")
+                }
+                _uiState.update { it.copy(groupMembers = members) }
+            }
         }
     }
 
@@ -95,6 +120,7 @@ class CreateTaskViewModel @Inject constructor(
     }
 
     fun onAssigneeChange(assigneeId: String?, assigneeName: String?) {
+        Log.d(TAG, "담당자 변경: $assigneeName ($assigneeId)")
         _uiState.update {
             it.copy(
                 assigneeId = assigneeId,
@@ -112,7 +138,9 @@ class CreateTaskViewModel @Inject constructor(
         }
 
         Log.d(TAG, "=== 할일 생성 시작 ===")
+        Log.d(TAG, "groupId: $groupId (개인=${groupId.isEmpty()})")
         Log.d(TAG, "title: ${currentState.title}")
+        Log.d(TAG, "assigneeName: ${currentState.assigneeName}")
         Log.d(TAG, "dueDate: ${currentState.dueDate}")
         Log.d(TAG, "dueTime: ${currentState.dueTime}")
         Log.d(TAG, "reminderEnabled: ${currentState.reminderEnabled}")
@@ -123,11 +151,11 @@ class CreateTaskViewModel @Inject constructor(
 
             val task = Task(
                 id = "",
-                groupId = groupId,
+                groupId = groupId,  // ✅ 빈 문자열이면 개인 할일
                 title = currentState.title,
                 description = currentState.description.takeIf { it.isNotBlank() },
                 assigneeId = currentState.assigneeId,
-                assigneeName = currentState.assigneeName,
+                assigneeName = currentState.assigneeName,  // ✅ 그룹 닉네임 저장
                 status = TaskStatus.PENDING,
                 priority = currentState.priority,
                 dueDate = currentState.dueDate,
@@ -148,7 +176,12 @@ class CreateTaskViewModel @Inject constructor(
                             createdTask.dueTime ?: LocalTime.of(23, 59)
                         )
 
-                        val groupName = currentState.selectedGroup?.name ?: "그룹"
+                        // ✅ 개인/그룹 구분
+                        val groupName = if (groupId.isEmpty()) {
+                            "개인 할일"
+                        } else {
+                            currentState.selectedGroup?.name ?: "그룹"
+                        }
 
                         Log.d(TAG, "📅 WorkManager 등록 시작")
                         Log.d(TAG, "  - taskId: ${createdTask.id}")
@@ -165,7 +198,7 @@ class CreateTaskViewModel @Inject constructor(
                             minutesBefore = createdTask.reminderMinutesBefore
                         )
 
-                        Log.d(TAG, "✅ WorkManager 등록 완료 (본인)")
+                        Log.d(TAG, "✅ WorkManager 등록 완료")
                     } else {
                         Log.d(TAG, "⏭️ 알림 비활성화 또는 마감일 없음 - WorkManager 등록 건너뜀")
                     }

@@ -1,5 +1,6 @@
 package com.buyoungsil.checkcheck.feature.task.presentation.create
 
+import AssigneePickerDialog
 import android.os.Build
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,7 +22,8 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 /**
- * 🧡 할일 생성 화면 - 실제 ViewModel에 정확히 맞춤
+ * 🧡 할일 생성 화면
+ * ✅ 개인/그룹 구분
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +34,9 @@ fun CreateTaskScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showDatePicker by remember { mutableStateOf(false) }
     var showPriorityDialog by remember { mutableStateOf(false) }
+
+    // ✅ 개인 할일 여부 확인
+    val isPersonalTask = uiState.selectedGroup == null
 
     LaunchedEffect(uiState.success) {
         if (uiState.success) {
@@ -44,7 +49,8 @@ fun CreateTaskScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "할일 만들기",
+                        // ✅ 개인/그룹 구분
+                        text = if (isPersonalTask) "개인 할일 만들기" else "그룹 할일 만들기",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -301,6 +307,7 @@ fun CreateTaskScreen(
                 }
             }
 
+            // 알림 설정 (마감 시간이 있을 때만)
             if (uiState.dueTime != null) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -391,65 +398,65 @@ fun CreateTaskScreen(
                 }
             }
 
-
-// 담당자 선택
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = ComponentShapes.TaskCard,
-                colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+            // ✅ 담당자 선택 - 그룹 할일일 때만 표시
+            if (!isPersonalTask) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = ComponentShapes.TaskCard,
+                    colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Text(
-                        text = "담당자 (선택)",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimaryLight
-                    )
-
-                    var showAssigneeDialog by remember { mutableStateOf(false) }
-
-                    OutlinedCard(
-                        onClick = { showAssigneeDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.outlinedCardColors(
-                            containerColor = if (uiState.assigneeName != null) OrangeSurfaceVariant else androidx.compose.ui.graphics.Color.White
-                        )
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = uiState.assigneeName ?: "담당자 지정 안 함 (누구나)",
-                                fontWeight = if (uiState.assigneeName != null) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (uiState.assigneeName != null) OrangePrimary else TextSecondaryLight
+                        Text(
+                            text = "담당자 (선택)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimaryLight
+                        )
+
+                        var showAssigneeDialog by remember { mutableStateOf(false) }
+
+                        OutlinedCard(
+                            onClick = { showAssigneeDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.outlinedCardColors(
+                                containerColor = if (uiState.assigneeName != null) OrangeSurfaceVariant else androidx.compose.ui.graphics.Color.White
                             )
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = null,
-                                tint = if (uiState.assigneeName != null) OrangePrimary else TextSecondaryLight
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = uiState.assigneeName ?: "담당자 지정 안 함 (누구나)",
+                                    fontWeight = if (uiState.assigneeName != null) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (uiState.assigneeName != null) OrangePrimary else TextSecondaryLight
+                                )
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = if (uiState.assigneeName != null) OrangePrimary else TextSecondaryLight
+                                )
+                            }
+                        }
+
+                        if (showAssigneeDialog) {
+                            AssigneePickerDialog(
+                                groupMembers = uiState.groupMembers,  // ✅ GroupMember 리스트 전달
+                                currentUserId = viewModel.currentUserId,
+                                onAssigneeSelected = { userId, userName ->
+                                    viewModel.onAssigneeChange(userId, userName)
+                                    showAssigneeDialog = false
+                                },
+                                onDismiss = { showAssigneeDialog = false }
                             )
                         }
-                    }
-
-                    // 담당자 선택 다이얼로그
-                    if (showAssigneeDialog && uiState.selectedGroup != null) {
-                        AssigneePickerDialog(
-                            group = uiState.selectedGroup!!,
-                            currentUserId = viewModel.currentUserId,
-                            onAssigneeSelected = { userId, userName ->
-                                viewModel.onAssigneeChange(userId, userName)
-                                showAssigneeDialog = false
-                            },
-                            onDismiss = { showAssigneeDialog = false }
-                        )
                     }
                 }
             }
@@ -607,140 +614,6 @@ private fun TimePickerDialog(
                 Text("확인", color = OrangePrimary, fontWeight = FontWeight.Bold)
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("취소")
-            }
-        }
-    )
-}
-
-/**
- * 담당자 선택 다이얼로그
- */
-@Composable
-private fun AssigneePickerDialog(
-    group: com.buyoungsil.checkcheck.feature.group.domain.model.Group,
-    currentUserId: String,
-    onAssigneeSelected: (String?, String?) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "담당자 선택",
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // "누구나" 옵션
-                OutlinedCard(
-                    onClick = {
-                        onAssigneeSelected(null, null)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.outlinedCardColors(
-                        containerColor = androidx.compose.ui.graphics.Color.White
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                "담당자 지정 안 함",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                "누구나 완료 가능",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondaryLight
-                            )
-                        }
-                        Icon(
-                            Icons.Default.Groups,
-                            contentDescription = null,
-                            tint = OrangePrimary
-                        )
-                    }
-                }
-
-                // 그룹 멤버들
-                if (group.memberIds.isNotEmpty()) {
-                    Text(
-                        "그룹 멤버",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = TextSecondaryLight,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                    )
-
-                    group.memberIds.forEach { memberId ->
-                        OutlinedCard(
-                            onClick = {
-                                // TODO: 실제로는 Firestore에서 사용자 이름을 가져와야 함
-                                val memberName = if (memberId == currentUserId) {
-                                    "나"
-                                } else {
-                                    "멤버" // 나중에 실제 이름으로 교체
-                                }
-                                onAssigneeSelected(memberId, memberName)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.outlinedCardColors(
-                                containerColor = if (memberId == currentUserId) {
-                                    OrangeSurfaceVariant
-                                } else {
-                                    androidx.compose.ui.graphics.Color.White
-                                }
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    if (memberId == currentUserId) "나" else "멤버",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (memberId == currentUserId) {
-                                        FontWeight.SemiBold
-                                    } else {
-                                        FontWeight.Normal
-                                    }
-                                )
-                                if (memberId == currentUserId) {
-                                    Surface(
-                                        shape = ComponentShapes.Chip,
-                                        color = OrangePrimary.copy(alpha = 0.15f)
-                                    ) {
-                                        Text(
-                                            "나",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = OrangePrimary,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("취소")

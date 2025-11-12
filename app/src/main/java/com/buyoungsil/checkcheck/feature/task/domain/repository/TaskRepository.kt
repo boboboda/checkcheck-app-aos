@@ -13,4 +13,5 @@ interface TaskRepository {
     suspend fun updateTask(task: Task)
     suspend fun deleteTask(taskId: String)
     suspend fun completeTask(taskId: String, userId: String)
+    fun getPersonalTasks(userId: String): Flow<List<Task>>
 }

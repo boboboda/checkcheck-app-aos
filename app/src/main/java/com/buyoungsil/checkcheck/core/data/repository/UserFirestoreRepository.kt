@@ -97,4 +97,16 @@ class UserFirestoreRepository @Inject constructor(
             emptyList()
         }
     }
+
+    // ==================== displayName 업데이트 ====================
+    override suspend fun updateDisplayName(userId: String, displayName: String) {
+        usersCollection.document(userId)
+            .update(
+                mapOf(
+                    "displayName" to displayName,
+                    "updatedAt" to com.google.firebase.Timestamp.now()
+                )
+            )
+            .await()
+    }
 }

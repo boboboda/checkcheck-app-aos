@@ -6,10 +6,10 @@ package com.buyoungsil.checkcheck.core.domain.model
  */
 data class User(
     val id: String,
+    val displayName: String,  // 전역 닉네임
     val email: String? = null,
-    val displayName: String? = null,
     val photoUrl: String? = null,
-    val fcmToken: String? = null,  // ✅ FCM 토큰 추가
+    val fcmToken: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

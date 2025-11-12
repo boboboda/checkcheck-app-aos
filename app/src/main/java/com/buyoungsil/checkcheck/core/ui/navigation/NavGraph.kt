@@ -48,6 +48,9 @@ fun NavGraph(
                 },
                 onNavigateToHabitList = {  // ✅ 추가
                     navController.navigate(Screen.HabitList.route)
+                },
+                onNavigateToPersonalTaskCreate = {  // ✅ 추가
+                    navController.navigate(Screen.PersonalTaskCreate.route)
                 }
             )
         }
@@ -186,6 +189,14 @@ fun NavGraph(
                 },
                 onSuccess = {
                     // 연동 성공 시 설정 화면으로 돌아가기
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.PersonalTaskCreate.route) {
+            CreateTaskScreen(
+                onNavigateBack = {
                     navController.popBackStack()
                 }
             )

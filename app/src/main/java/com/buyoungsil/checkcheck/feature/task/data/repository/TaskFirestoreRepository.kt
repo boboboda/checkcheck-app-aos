@@ -128,4 +128,26 @@ class TaskFirestoreRepository @Inject constructor(
             )
             .await()
     }
+
+    // TaskFirestoreRepository.kt에 이 함수 추가
+
+    override fun getPersonalTasks(userId: String): Flow<List<Task>> = callbackFlow {
+        val listener = tasksCollection
+            .whereEqualTo("createdBy", userId)
+            .whereEqualTo("groupId", "")  // ✅ 빈 문자열 = 개인 할일
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                val tasks = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(TaskFirestoreDto::class.java)?.toDomain()
+                }?.sortedByDescending { it.createdAt } ?: emptyList()
+
+                trySend(tasks)
+            }
+
+        awaitClose { listener.remove() }
+    }
 }

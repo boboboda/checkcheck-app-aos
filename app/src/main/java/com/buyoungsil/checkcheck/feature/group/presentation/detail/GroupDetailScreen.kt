@@ -47,23 +47,31 @@ fun GroupDetailScreen(
     var showInviteDialog by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
+    var showEditNicknameDialog by remember { mutableStateOf(false) }
+
+
+    val isOwner = uiState.group?.ownerId == viewModel.currentUserId
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            text = uiState.group?.name ?: "그룹",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
-                        Text(
-                            text = "오늘 ${uiState.todayCompletedCount}/${uiState.todayTotalCount} 완료 🎉",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondaryLight
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = uiState.group?.name ?: "그룹",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${uiState.memberCount}명",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondaryLight
+                            )
+                        }
                     }
                 },
                 navigationIcon = {
@@ -102,6 +110,19 @@ fun GroupDetailScreen(
                                     Icon(Icons.Default.PersonAdd, contentDescription = null)
                                 }
                             )
+
+                            DropdownMenuItem(
+                                text = { Text("내 닉네임 변경") },
+                                onClick = {
+                                    showOptionsMenu = false
+                                    showEditNicknameDialog = true
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Edit, contentDescription = null)
+                                }
+                            )
+
+
                             DropdownMenuItem(
                                 text = {
                                     Text(
@@ -209,13 +230,14 @@ fun GroupDetailScreen(
                         contentPadding = PaddingValues(20.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // 📊 그룹 정보 카드
                         item {
                             GroupInfoCard(
                                 group = uiState.group,
                                 memberCount = uiState.memberCount,
                                 todayCompletedCount = uiState.todayCompletedCount,
-                                todayTotalCount = uiState.todayTotalCount
+                                todayTotalCount = uiState.todayTotalCount,
+                                isOwner = uiState.group?.ownerId == uiState.currentUserId,
+                                myNickname = uiState.myNickname  // ✅ 이 줄 추가
                             )
                         }
 
@@ -344,6 +366,17 @@ fun GroupDetailScreen(
             },
             containerColor = Color.White,
             shape = ComponentShapes.TaskCard
+        )
+    }
+
+    if (showEditNicknameDialog) {
+        EditNicknameDialog(
+            currentNickname = uiState.myNickname,
+            onConfirm = { newNickname ->
+                viewModel.onUpdateNickname(newNickname)
+                showEditNicknameDialog = false
+            },
+            onDismiss = { showEditNicknameDialog = false }
         )
     }
 
@@ -518,15 +551,14 @@ private fun SpeedDialItem(
 
 
 
-/**
- * 📊 그룹 정보 카드
- */
 @Composable
 private fun GroupInfoCard(
     group: com.buyoungsil.checkcheck.feature.group.domain.model.Group?,
     memberCount: Int,
     todayCompletedCount: Int,
-    todayTotalCount: Int
+    todayTotalCount: Int,
+    isOwner: Boolean,
+    myNickname: String?  // ✅ 추가
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -544,13 +576,11 @@ private fun GroupInfoCard(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 그룹 아이콘 & 이름
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // 그룹 아이콘
                 Box(
                     modifier = Modifier
                         .size(64.dp)
@@ -571,54 +601,105 @@ private fun GroupInfoCard(
                     )
                 }
 
-                // 그룹 정보
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = group?.name ?: "그룹",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimaryLight
-                    )
-                    Text(
-                        text = "멤버 ${memberCount}명",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondaryLight
-                    )
+                    // ✅ Option 3: 그룹명 (내 닉네임) + 역할 배지
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // 그룹명
+                        Text(
+                            text = group?.name ?: "그룹",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimaryLight
+                        )
+
+                        // ✅ 내 닉네임 표시
+                        if (myNickname != null) {
+                            Text(
+                                text = "($myNickname)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = OrangePrimary
+                            )
+                        }
+
+                        // 역할 배지
+                        Surface(
+                            shape = ComponentShapes.Badge,
+                            color = if (isOwner) {
+                                OrangePrimary.copy(alpha = 0.15f)
+                            } else {
+                                Color.Gray.copy(alpha = 0.15f)
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (isOwner) "👑" else "👤",
+                                    fontSize = 12.sp
+                                )
+                                Text(
+                                    text = if (isOwner) "그룹장" else "멤버",
+                                    style = CustomTypography.chip,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isOwner) OrangePrimary else Color.Gray
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = ComponentShapes.Chip,
+                            color = getGroupTypeColor(group?.type?.name?.lowercase() ?: "").copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = group?.type?.displayName ?: "",
+                                style = CustomTypography.chip,
+                                fontWeight = FontWeight.SemiBold,
+                                color = getGroupTypeColor(group?.type?.name?.lowercase() ?: ""),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        Text(
+                            text = "•",
+                            color = TextSecondaryLight
+                        )
+
+                        Text(
+                            text = "👥 ${memberCount}명",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondaryLight
+                        )
+                    }
                 }
             }
 
-            HorizontalDivider(color = DividerLight)
+            Divider(color = DividerLight)
 
-            // 오늘의 진행률
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "오늘의 진행률",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimaryLight
-                    )
-                    Text(
-                        text = if (todayTotalCount > 0) {
-                            "${(todayCompletedCount.toFloat() / todayTotalCount * 100).toInt()}%"
-                        } else {
-                            "0%"
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = OrangePrimary
-                    )
-                }
+                Text(
+                    text = "오늘의 달성 현황",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = OrangePrimary
+                )
 
-                // 프로그레스바
                 LinearProgressIndicator(
                     progress = {
                         if (todayTotalCount > 0) {

@@ -1,12 +1,13 @@
 package com.buyoungsil.checkcheck.feature.group.domain.usecase
 
+import com.buyoungsil.checkcheck.feature.group.domain.model.Group
 import com.buyoungsil.checkcheck.feature.group.domain.repository.GroupRepository
 import javax.inject.Inject
 
 class JoinGroupUseCase @Inject constructor(
     private val repository: GroupRepository
 ) {
-    suspend operator fun invoke(inviteCode: String, userId: String): Result<Unit> {
+    suspend operator fun invoke(inviteCode: String, userId: String): Result<Group> {  // ✅ Group 반환
         return try {
             val group = repository.getGroupByInviteCode(inviteCode)
                 ?: return Result.failure(Exception("그룹을 찾을 수 없습니다"))
@@ -20,7 +21,7 @@ class JoinGroupUseCase @Inject constructor(
             }
 
             repository.joinGroup(group.id, userId)
-            Result.success(Unit)
+            Result.success(group)  // ✅ group 반환
         } catch (e: Exception) {
             Result.failure(e)
         }

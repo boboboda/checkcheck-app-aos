@@ -17,6 +17,7 @@ import com.buyoungsil.checkcheck.feature.task.domain.model.Task
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskPriority
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
 import com.buyoungsil.checkcheck.feature.task.domain.usecase.GetGroupTasksUseCase
+import com.buyoungsil.checkcheck.feature.task.domain.usecase.GetPersonalTasksUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -33,7 +34,8 @@ class HomeViewModel @Inject constructor(
     private val repository: HabitRepository,
     private val deleteHabitUseCase: DeleteHabitUseCase,
     private val leaveGroupUseCase: LeaveGroupUseCase,
-    private val authManager: FirebaseAuthManager
+    private val authManager: FirebaseAuthManager,
+    private val getPersonalTasksUseCase: GetPersonalTasksUseCase,
 ) : ViewModel() {
 
     companion object {
@@ -43,7 +45,7 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private val currentUserId: String
+    val currentUserId: String
         get() = authManager.currentUserId ?: "anonymous"
 
     init {
@@ -59,12 +61,13 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
 
             try {
-                // ✅ 1. 습관 + 그룹을 combine으로 동시 로드
+                // ✅ 1. 습관 + 그룹 + 개인 할일을 combine으로 동시 로드
                 combine(
                     getPersonalHabitsUseCase(currentUserId),
                     getMyGroupsUseCase(currentUserId),
-                    repository.getChecksByUserAndDate(currentUserId, LocalDate.now())
-                ) { habits, groups, todayChecks ->
+                    repository.getChecksByUserAndDate(currentUserId, LocalDate.now()),
+                    getPersonalTasksUseCase(currentUserId)  // ✅ 추가
+                ) { habits, groups, todayChecks, personalTasks ->  // ✅ personalTasks 추가
 
                     val habitsWithStats = habits.map { habit ->
                         val stats = getHabitStatisticsUseCase(habit.id).getOrNull()
@@ -77,13 +80,16 @@ class HomeViewModel @Inject constructor(
                         )
                     }
 
-                    Triple(habitsWithStats, groups, todayChecks.size)
+                    // ✅ Quad로 변경 (4개 반환)
+                    QuadData(habitsWithStats, groups, todayChecks.size, personalTasks)
                 }
-                    .flatMapLatest { (habitsWithStats, groups, todayCompletedCount) ->
+                    .flatMapLatest { quadData ->
+                        val (habitsWithStats, groups, todayCompletedCount, personalTasks) = quadData
+
                         // ✅ 2. 모든 그룹의 할일을 combine으로 실시간 구독
                         if (groups.isEmpty()) {
                             // 그룹이 없으면 빈 리스트 Flow 반환
-                            flowOf(Triple(habitsWithStats, emptyList<Task>(), todayCompletedCount))
+                            flowOf(QuadData(habitsWithStats, emptyList<Task>(), todayCompletedCount, personalTasks))
                         } else {
                             // 모든 그룹의 할일을 combine으로 합치기
                             combine(
@@ -113,7 +119,7 @@ class HomeViewModel @Inject constructor(
 
                                 Log.d(TAG, "전체 긴급 할일: ${sortedUrgentTasks.size}개")
 
-                                Triple(habitsWithStats, sortedUrgentTasks, todayCompletedCount)
+                                QuadData(habitsWithStats, sortedUrgentTasks, todayCompletedCount, personalTasks)
                             }
                         }
                     }
@@ -126,15 +132,19 @@ class HomeViewModel @Inject constructor(
                             )
                         }
                     }
-                    .collect { (habitsWithStats, urgentTasks, todayCompletedCount) ->
+                    .collect { quadData ->
+                        val (habitsWithStats, urgentTasks, todayCompletedCount, personalTasks) = quadData
+
                         Log.d(TAG, "=== UI 업데이트 ===")
                         Log.d(TAG, "습관: ${habitsWithStats.size}개")
                         Log.d(TAG, "긴급 할일: ${urgentTasks.size}개")
+                        Log.d(TAG, "개인 할일: ${personalTasks.size}개")  // ✅ 로그 추가
 
                         _uiState.update {
                             it.copy(
                                 habits = habitsWithStats,
                                 urgentTasks = urgentTasks,
+                                personalTasks = personalTasks,  // ✅ 추가
                                 todayCompletedCount = todayCompletedCount,
                                 todayTotalCount = habitsWithStats.size,
                                 isLoading = false,
@@ -155,6 +165,18 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // ✅ 헬퍼 데이터 클래스 추가 (HomeViewModel 내부 또는 외부)
+    data class QuadData<A, B, C, D>(
+        val first: A,
+        val second: B,
+        val third: C,
+        val fourth: D
+    )
+
+    operator fun <A, B, C, D> QuadData<A, B, C, D>.component1() = first
+    operator fun <A, B, C, D> QuadData<A, B, C, D>.component2() = second
+    operator fun <A, B, C, D> QuadData<A, B, C, D>.component3() = third
+    operator fun <A, B, C, D> QuadData<A, B, C, D>.component4() = fourth
     fun onHabitCheck(habitId: String) {
         viewModelScope.launch {
             Log.d(TAG, "습관 체크 시작: habitId=$habitId")
@@ -253,4 +275,6 @@ class HomeViewModel @Inject constructor(
         Log.d(TAG, "재시도 버튼 클릭")
         loadData()
     }
+
 }
+

@@ -30,6 +30,7 @@ sealed class Screen(val route: String) {
     object TaskCreate : Screen("task_create/{groupId}") {
         fun createRoute(groupId: String) = "task_create/$groupId"
     }
+    object PersonalTaskCreate : Screen("personal_task_create")
 
     // Statistics
     object Statistics : Screen("statistics")
