@@ -8,16 +8,23 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Base64
 import android.util.Log
+import androidx.hilt.work.HiltWorkerFactory
 import com.google.firebase.FirebaseApp
 import com.kakao.sdk.common.KakaoSdk
 import dagger.hilt.android.HiltAndroidApp
 import java.security.MessageDigest
+import javax.inject.Inject
+import androidx.work.Configuration
 
 @HiltAndroidApp
-class CheckCheckApplication : Application() {
+class CheckCheckApplication() : Application(), Configuration.Provider {
+
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
 
     override fun onCreate() {
         super.onCreate()
+
 
         // ✅ 키 해시 출력 (개발용)
         printKeyHash()
@@ -65,6 +72,13 @@ class CheckCheckApplication : Application() {
             Log.d(TAG, "✅ 알림 채널 생성 완료")
         }
     }
+
+    // ✅ WorkManager Configuration 제공 (HiltWorkerFactory 사용)
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .setMinimumLoggingLevel(Log.DEBUG)
+            .build()
 
     companion object {
         private const val TAG = "CheckCheckApp"

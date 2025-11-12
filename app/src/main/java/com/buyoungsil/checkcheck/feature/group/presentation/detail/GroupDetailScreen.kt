@@ -46,6 +46,7 @@ fun GroupDetailScreen(
     var isFabExpanded by remember { mutableStateOf(false) }
     var showInviteDialog by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -146,7 +147,8 @@ fun GroupDetailScreen(
                 }
             )
         }
-    ) { padding ->
+    )
+    { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -279,9 +281,12 @@ fun GroupDetailScreen(
                                     priority = task.priority.name.lowercase(),
                                     dueDate = task.dueDate,
                                     dueTime = task.dueTime,  // ✅ 추가
-                                    reminderMinutes = if (task.reminderEnabled) task.reminderMinutesBefore else null,  // ✅ 추가
+                                    reminderMinutes = task.reminderMinutesBefore,  // ✅ 추가
                                     assignee = task.assigneeName,
-                                    onCheck = { viewModel.onCompleteTask(task.id) }
+                                    createdBy = task.createdBy,  // ✅ 추가
+                                    currentUserId = uiState.currentUserId,  // ✅ 추가
+                                    onCheck = { viewModel.onCompleteTask(task.id) },
+                                    onDelete = { showDeleteDialog = task.id }  // ✅ 추가
                                 )
                             }
                         }
@@ -294,6 +299,52 @@ fun GroupDetailScreen(
                 }
             }
         }
+    }
+
+    // ✅ 할일 삭제 확인 다이얼로그
+    showDeleteDialog?.let { taskId ->
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            title = {
+                Text(
+                    text = "할일 삭제",
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryLight
+                )
+            },
+            text = {
+                Text(
+                    text = "정말 이 할일을 삭제하시겠어요?\n삭제된 할일은 복구할 수 없습니다.",
+                    color = TextSecondaryLight
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onDeleteTask(taskId)
+                        showDeleteDialog = null
+                    }
+                ) {
+                    Text(
+                        text = "삭제",
+                        color = ErrorRed,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = null }
+                ) {
+                    Text(
+                        text = "취소",
+                        color = TextSecondaryLight
+                    )
+                }
+            },
+            containerColor = Color.White,
+            shape = ComponentShapes.TaskCard
+        )
     }
 
     // ✅ 초대 코드 다이얼로그

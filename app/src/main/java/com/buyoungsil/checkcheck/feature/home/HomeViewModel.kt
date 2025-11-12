@@ -56,34 +56,16 @@ class HomeViewModel @Inject constructor(
         Log.d(TAG, "=== loadData() 시작 ===")
 
         viewModelScope.launch {
-            Log.d(TAG, "viewModelScope.launch 진입")
             _uiState.update { it.copy(isLoading = true) }
-            Log.d(TAG, "isLoading = true 설정 완료")
 
             try {
-                Log.d(TAG, "combine() 호출 전")
-
-                // ✅ 1. 습관 + 그룹 + 긴급 할일을 combine으로 동시 로드
+                // ✅ 1. 습관 + 그룹을 combine으로 동시 로드
                 combine(
-                    getPersonalHabitsUseCase(currentUserId)
-                        .onStart { Log.d(TAG, "✨ Flow 1 (habits) 시작") }
-                        .onEach { Log.d(TAG, "✅ Flow 1 emit: ${it.size}개 습관") },
-
-                    getMyGroupsUseCase(currentUserId)
-                        .onStart { Log.d(TAG, "✨ Flow 2 (groups) 시작") }
-                        .onEach { Log.d(TAG, "✅ Flow 2 emit: ${it.size}개 그룹") },
-
+                    getPersonalHabitsUseCase(currentUserId),
+                    getMyGroupsUseCase(currentUserId),
                     repository.getChecksByUserAndDate(currentUserId, LocalDate.now())
-                        .onStart { Log.d(TAG, "✨ Flow 3 (checks) 시작") }
-                        .onEach { Log.d(TAG, "✅ Flow 3 emit: ${it.size}개 체크") }
-
                 ) { habits, groups, todayChecks ->
-                    Log.d(TAG, "=== combine 내부 ===")
-                    Log.d(TAG, "habits: ${habits.size}")
-                    Log.d(TAG, "groups: ${groups.size}")
-                    Log.d(TAG, "todayChecks: ${todayChecks.size}")
 
-                    // 습관 통계 계산
                     val habitsWithStats = habits.map { habit ->
                         val stats = getHabitStatisticsUseCase(habit.id).getOrNull()
                         val isCheckedToday = todayChecks.any { it.habitId == habit.id && it.completed }
@@ -97,27 +79,23 @@ class HomeViewModel @Inject constructor(
 
                     Triple(habitsWithStats, groups, todayChecks.size)
                 }
-                    .catch { e ->
-                        Log.e(TAG, "❌ combine 실행 중 에러", e)
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                error = e.message ?: "데이터 로드 실패"
-                            )
-                        }
-                    }
-                    .collect { (habitsWithStats, groups, todayCompletedCount) ->
-                        Log.d(TAG, "=== collect 진입 ===")
+                    .flatMapLatest { (habitsWithStats, groups, todayCompletedCount) ->
+                        // ✅ 2. 모든 그룹의 할일을 combine으로 실시간 구독
+                        if (groups.isEmpty()) {
+                            // 그룹이 없으면 빈 리스트 Flow 반환
+                            flowOf(Triple(habitsWithStats, emptyList<Task>(), todayCompletedCount))
+                        } else {
+                            // 모든 그룹의 할일을 combine으로 합치기
+                            combine(
+                                groups.map { group ->
+                                    getGroupTasksUseCase(group.id)
+                                }
+                            ) { tasksArrays ->
+                                // 모든 그룹의 할일을 하나의 리스트로 합치기
+                                val allTasks = tasksArrays.flatMap { it.toList() }
 
-                        // ✅ 2. 그룹들의 긴급 할일 가져오기
-                        val allUrgentTasks = mutableListOf<Task>()
-
-                        for (group in groups) {
-                            try {
-                                val tasks = getGroupTasksUseCase(group.id).first()
-
-                                // 긴급 필터링: 완료되지 않았고 (긴급 우선순위 또는 오늘/내일 마감)
-                                val urgentFiltered = tasks.filter { task ->
+                                // 긴급 필터링
+                                val urgentTasks = allTasks.filter { task ->
                                     task.status != TaskStatus.COMPLETED && (
                                             task.priority == TaskPriority.URGENT ||
                                                     task.dueDate?.let { dueDate ->
@@ -126,41 +104,45 @@ class HomeViewModel @Inject constructor(
                                             )
                                 }
 
-                                allUrgentTasks.addAll(urgentFiltered)
-                                Log.d(TAG, "그룹 ${group.name}: ${urgentFiltered.size}개 긴급 할일")
-                            } catch (e: Exception) {
-                                Log.e(TAG, "그룹 ${group.name} 할일 로드 실패", e)
+                                // 정렬: 우선순위 > 마감일
+                                val sortedUrgentTasks = urgentTasks
+                                    .sortedWith(
+                                        compareBy<Task> { it.priority.ordinal }
+                                            .thenBy { it.dueDate ?: LocalDate.MAX }
+                                    )
+
+                                Log.d(TAG, "전체 긴급 할일: ${sortedUrgentTasks.size}개")
+
+                                Triple(habitsWithStats, sortedUrgentTasks, todayCompletedCount)
                             }
                         }
-
-                        // 정렬: 우선순위 > 마감일
-                        val sortedUrgentTasks = allUrgentTasks
-                            .sortedWith(
-                                compareBy<Task> { it.priority.ordinal }
-                                    .thenBy { it.dueDate ?: LocalDate.MAX }
+                    }
+                    .catch { e ->
+                        Log.e(TAG, "❌ 데이터 로드 실패", e)
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = e.message ?: "데이터 로드 실패"
                             )
-                            .take(3)  // 최대 3개만
-
-                        Log.d(TAG, "총 긴급 할일: ${sortedUrgentTasks.size}개")
+                        }
+                    }
+                    .collect { (habitsWithStats, urgentTasks, todayCompletedCount) ->
+                        Log.d(TAG, "=== UI 업데이트 ===")
+                        Log.d(TAG, "습관: ${habitsWithStats.size}개")
+                        Log.d(TAG, "긴급 할일: ${urgentTasks.size}개")
 
                         _uiState.update {
                             it.copy(
                                 habits = habitsWithStats,
-                                groups = groups,
-                                urgentTasks = sortedUrgentTasks,  // ✅ 긴급 할일 설정
+                                urgentTasks = urgentTasks,
                                 todayCompletedCount = todayCompletedCount,
                                 todayTotalCount = habitsWithStats.size,
                                 isLoading = false,
                                 error = null
                             )
                         }
-
-                        Log.d(TAG, "✅ UI State 업데이트 완료")
-                        Log.d(TAG, "  - habits: ${habitsWithStats.size}")
-                        Log.d(TAG, "  - groups: ${groups.size}")
-                        Log.d(TAG, "  - urgentTasks: ${sortedUrgentTasks.size}")
-                        Log.d(TAG, "  - isLoading: false")
                     }
+
             } catch (e: Exception) {
                 Log.e(TAG, "❌ loadData 실패", e)
                 _uiState.update {

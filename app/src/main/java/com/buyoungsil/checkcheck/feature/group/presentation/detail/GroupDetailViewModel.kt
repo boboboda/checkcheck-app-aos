@@ -53,7 +53,12 @@ class GroupDetailViewModel @Inject constructor(
 
     private fun loadGroupDetail() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    currentUserId = currentUserId  // ✅ userId 설정
+                )
+            }
 
             try {
                 // 그룹 정보 가져오기
@@ -98,6 +103,7 @@ class GroupDetailViewModel @Inject constructor(
                             tasks = tasks,
                             memberCount = group.memberIds.size,
                             todayCompletedCount = completedCount,
+                            currentUserId = currentUserId,
                             todayTotalCount = totalCount,
                             isLoading = false,
                             error = null

@@ -154,7 +154,7 @@ fun HomeScreen(
                                     tasks = uiState.urgentTasks,
                                     onTaskClick = { task ->
                                         // TODO: Task 상세 화면으로 이동
-                                        Log.d("HomeScreen", "긴급 할일 클릭: ${task.title}")
+                                        onNavigateToGroupDetail(task.groupId)
                                     }
                                 )
                             }

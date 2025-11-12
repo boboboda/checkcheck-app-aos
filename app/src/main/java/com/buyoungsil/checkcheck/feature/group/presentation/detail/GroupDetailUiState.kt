@@ -11,6 +11,7 @@ data class GroupDetailUiState(
     val memberCount: Int = 0,
     val todayCompletedCount: Int = 0,
     val todayTotalCount: Int = 0,
+    val currentUserId: String = "",  // ✅ 추가
     val isLoading: Boolean = false,
     val error: String? = null
 )
