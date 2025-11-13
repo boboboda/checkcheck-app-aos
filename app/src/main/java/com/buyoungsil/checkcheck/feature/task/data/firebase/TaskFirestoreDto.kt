@@ -9,10 +9,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Date
 
-/**
- * Task Firestore DTO
- * ✅ 알림 필드 추가
- */
 data class TaskFirestoreDto(
     @DocumentId
     val id: String = "",
@@ -23,10 +19,11 @@ data class TaskFirestoreDto(
     val assigneeName: String? = null,
     val status: String = TaskStatus.PENDING.name,
     val priority: String = TaskPriority.NORMAL.name,
-    val dueDate: String? = null,              // LocalDate → String
-    val dueTime: String? = null,              // ✅ LocalTime → String
-    val reminderEnabled: Boolean = false,     // ✅
-    val reminderMinutesBefore: Int = 60,      // ✅
+    val dueDate: String? = null,
+    val dueTime: String? = null,
+    val reminderEnabled: Boolean = false,
+    val reminderMinutesBefore: Int = 60,
+    val coinReward: Int = 0,
     val completedBy: String? = null,
     val completedAt: Long? = null,
     val createdBy: String = "",
@@ -38,7 +35,7 @@ data class TaskFirestoreDto(
     constructor() : this(
         "", "", "", null, null, null,
         TaskStatus.PENDING.name, TaskPriority.NORMAL.name,
-        null, null, false, 60, null, null, "", null, null
+        null, null, false, 60, 0, null, null, "", null, null
     )
 
     fun toDomain(): Task {
@@ -60,9 +57,10 @@ data class TaskFirestoreDto(
                 TaskPriority.NORMAL
             },
             dueDate = dueDate?.let { LocalDate.parse(it) },
-            dueTime = dueTime?.let { LocalTime.parse(it) },          // ✅
-            reminderEnabled = reminderEnabled,                        // ✅
-            reminderMinutesBefore = reminderMinutesBefore,            // ✅
+            dueTime = dueTime?.let { LocalTime.parse(it) },
+            reminderEnabled = reminderEnabled,
+            reminderMinutesBefore = reminderMinutesBefore,
+            coinReward = coinReward,
             completedBy = completedBy,
             completedAt = completedAt,
             createdBy = createdBy,
@@ -83,9 +81,10 @@ data class TaskFirestoreDto(
                 status = task.status.name,
                 priority = task.priority.name,
                 dueDate = task.dueDate?.toString(),
-                dueTime = task.dueTime?.toString(),                   // ✅
-                reminderEnabled = task.reminderEnabled,               // ✅
-                reminderMinutesBefore = task.reminderMinutesBefore,   // ✅
+                dueTime = task.dueTime?.toString(),
+                reminderEnabled = task.reminderEnabled,
+                reminderMinutesBefore = task.reminderMinutesBefore,
+                coinReward = task.coinReward,
                 completedBy = task.completedBy,
                 completedAt = task.completedAt,
                 createdBy = task.createdBy,

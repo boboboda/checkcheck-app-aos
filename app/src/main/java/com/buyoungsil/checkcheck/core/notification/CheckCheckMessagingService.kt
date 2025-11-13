@@ -185,18 +185,40 @@ class CheckCheckMessagingService : FirebaseMessagingService() {
 
     /**
      * 할일 완료 알림 처리
+     * ✅ 워커 취소 기능 추가
      */
     private fun handleTaskCompleted(remoteMessage: RemoteMessage) {
-        val title = remoteMessage.notification?.title ?: "할일 완료"
-        val body = remoteMessage.notification?.body ?: "멤버가 할일을 완료했습니다"
+        try {
+            val data = remoteMessage.data
+            val taskId = data["taskId"] ?: ""
 
-        showNotification(
-            notificationId = NOTIFICATION_ID_BASE + 1,
-            title = title,
-            body = body,
-            data = remoteMessage.data
-        )
-        Log.d(TAG, "✅ 할일 완료 알림 표시 완료")
+            Log.d(TAG, "할일 완료 알림 수신:")
+            Log.d(TAG, "  - taskId: $taskId")
+
+            // ✅ 1. WorkManager 워커 취소
+            if (taskId.isNotEmpty()) {
+                Log.d(TAG, "📌 WorkManager 취소 시도")
+                taskReminderScheduler.cancelTaskReminder(taskId)
+                Log.d(TAG, "✅ WorkManager 취소 완료")
+            } else {
+                Log.w(TAG, "⚠️ taskId가 비어있음 - 워커 취소 건너뜀")
+            }
+
+            // ✅ 2. 즉시 알림 표시
+            val title = remoteMessage.notification?.title ?: "할일 완료"
+            val body = remoteMessage.notification?.body ?: "멤버가 할일을 완료했습니다"
+
+            showNotification(
+                notificationId = NOTIFICATION_ID_BASE + 1,
+                title = title,
+                body = body,
+                data = data
+            )
+            Log.d(TAG, "✅ 할일 완료 알림 표시 완료")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 할일 완료 알림 처리 실패", e)
+        }
     }
 
     /**

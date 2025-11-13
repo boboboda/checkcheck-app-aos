@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.*
 import com.buyoungsil.checkcheck.core.notification.worker.TaskReminderWorker
+import com.buyoungsil.checkcheck.core.notification.worker.TaskReminderWorker.Companion.WORK_TAG_PREFIX
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Duration
 import java.time.LocalDateTime
@@ -88,17 +89,31 @@ class TaskReminderScheduler @Inject constructor(
     }
 
     /**
-     * 할일 알림 취소
+     * ✅ 할일 완료 시 워커 취소
      */
     fun cancelTaskReminder(taskId: String) {
+        Log.d(TAG, "========================================")
+        Log.d(TAG, "🚫 WorkManager 취소 시작")
+        Log.d(TAG, "  - taskId: $taskId")
+        Log.d(TAG, "  - Work Tag: ${getWorkTag(taskId)}")
+
         workManager.cancelAllWorkByTag(getWorkTag(taskId))
+
+        Log.d(TAG, "✅ WorkManager 취소 완료!")
+        Log.d(TAG, "========================================")
     }
 
     /**
-     * 모든 할일 알림 취소
+     * ✅ 모든 할일 알림 취소
      */
     fun cancelAllTaskReminders() {
-        workManager.cancelAllWorkByTag(TaskReminderWorker.WORK_TAG_PREFIX)
+        Log.d(TAG, "========================================")
+        Log.d(TAG, "🚫 모든 WorkManager 취소")
+
+        workManager.cancelAllWorkByTag(WORK_TAG_PREFIX)
+
+        Log.d(TAG, "✅ 모든 WorkManager 취소 완료!")
+        Log.d(TAG, "========================================")
     }
 
     /**

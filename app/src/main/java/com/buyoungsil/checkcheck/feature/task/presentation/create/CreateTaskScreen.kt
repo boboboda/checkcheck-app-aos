@@ -4,6 +4,7 @@ import AssigneePickerDialog
 import android.os.Build
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -11,8 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.buyoungsil.checkcheck.core.ui.components.*
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskPriority
@@ -397,6 +402,84 @@ fun CreateTaskScreen(
                     }
                 }
             }
+
+            // 기존 알림 설정 Card 아래에 추가
+
+// 💰 코인 보상 설정
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = ComponentShapes.TaskCard,
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 2.dp
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "💰",
+                            fontSize = 24.sp,
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                        Text(
+                            text = "코인 보상",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimaryDark
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = if (uiState.coinReward == 0) "" else uiState.coinReward.toString(),
+                        onValueChange = { value ->
+                            viewModel.onCoinRewardChanged(value)
+                        },
+                        label = { Text("완료 시 지급할 코인") },
+                        placeholder = { Text("0") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = OrangePrimary
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        ),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = OrangePrimary,
+                            focusedLabelColor = OrangePrimary,
+                            cursorColor = OrangePrimary
+                        )
+                    )
+
+                    if (uiState.coinReward > 0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "이 할일을 완료하면 ${uiState.coinReward}코인을 받을 수 있어요!",
+                            fontSize = 14.sp,
+                            color = OrangePrimary,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // ✅ 담당자 선택 - 그룹 할일일 때만 표시
             if (!isPersonalTask) {

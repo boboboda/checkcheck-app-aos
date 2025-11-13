@@ -8,10 +8,6 @@ import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
 import java.time.LocalDate
 import java.time.LocalTime
 
-/**
- * Task Room Entity
- * ✅ 알림 필드 추가
- */
 @Entity(tableName = "tasks")
 data class TaskEntity(
     @PrimaryKey
@@ -23,10 +19,11 @@ data class TaskEntity(
     val assigneeName: String?,
     val status: String,
     val priority: String,
-    val dueDate: String?,                  // LocalDate → String
-    val dueTime: String?,                  // ✅ LocalTime → String
-    val reminderEnabled: Boolean,          // ✅
-    val reminderMinutesBefore: Int,        // ✅
+    val dueDate: String?,
+    val dueTime: String?,
+    val reminderEnabled: Boolean,
+    val reminderMinutesBefore: Int,
+    val coinReward: Int,
     val completedBy: String?,
     val completedAt: Long?,
     val createdBy: String,
@@ -44,9 +41,10 @@ data class TaskEntity(
             status = TaskStatus.valueOf(status),
             priority = TaskPriority.valueOf(priority),
             dueDate = dueDate?.let { LocalDate.parse(it) },
-            dueTime = dueTime?.let { LocalTime.parse(it) },          // ✅
-            reminderEnabled = reminderEnabled,                        // ✅
-            reminderMinutesBefore = reminderMinutesBefore,            // ✅
+            dueTime = dueTime?.let { LocalTime.parse(it) },
+            reminderEnabled = reminderEnabled,
+            reminderMinutesBefore = reminderMinutesBefore,
+            coinReward = coinReward,
             completedBy = completedBy,
             completedAt = completedAt,
             createdBy = createdBy,
@@ -67,9 +65,10 @@ data class TaskEntity(
                 status = task.status.name,
                 priority = task.priority.name,
                 dueDate = task.dueDate?.toString(),
-                dueTime = task.dueTime?.toString(),                   // ✅
-                reminderEnabled = task.reminderEnabled,               // ✅
-                reminderMinutesBefore = task.reminderMinutesBefore,   // ✅
+                dueTime = task.dueTime?.toString(),
+                reminderEnabled = task.reminderEnabled,
+                reminderMinutesBefore = task.reminderMinutesBefore,
+                coinReward = task.coinReward,
                 completedBy = task.completedBy,
                 completedAt = task.completedAt,
                 createdBy = task.createdBy,

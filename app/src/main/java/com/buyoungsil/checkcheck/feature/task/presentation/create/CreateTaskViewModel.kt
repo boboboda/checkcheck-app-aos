@@ -162,7 +162,8 @@ class CreateTaskViewModel @Inject constructor(
                 dueTime = currentState.dueTime,
                 reminderEnabled = currentState.reminderEnabled,
                 reminderMinutesBefore = currentState.reminderMinutesBefore,
-                createdBy = currentUserId
+                createdBy = currentUserId,
+                coinReward = currentState.coinReward
             )
 
             createTaskUseCase(task)
@@ -220,5 +221,10 @@ class CreateTaskViewModel @Inject constructor(
                     }
                 }
         }
+    }
+
+    fun onCoinRewardChanged(amount: String) {
+        val coinAmount = amount.toIntOrNull() ?: 0
+        _uiState.update { it.copy(coinReward = coinAmount) }
     }
 }
