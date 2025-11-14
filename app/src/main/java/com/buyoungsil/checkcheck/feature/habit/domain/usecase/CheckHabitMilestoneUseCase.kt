@@ -1,8 +1,9 @@
 package com.buyoungsil.checkcheck.feature.habit.domain.usecase
 
 import android.util.Log
+import com.buyoungsil.checkcheck.core.constants.HabitLimits
 import com.buyoungsil.checkcheck.feature.coin.domain.usecase.RewardHabitCompletionUseCase
-import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitMilestones
+import com.buyoungsil.checkcheck.feature.coin.domain.usecase.ValidateMonthlyHabitCoinsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitRewardRecord
 import com.buyoungsil.checkcheck.feature.habit.domain.repository.HabitRepository
 import com.google.firebase.firestore.FirebaseFirestore
@@ -12,10 +13,15 @@ import javax.inject.Inject
 
 /**
  * 습관 체크 시 마일스톤 달성 여부 확인 및 코인 지급 UseCase
+ *
+ * ✅ 월간 코인 제한 검증 통합
+ *
+ * @since 2025-01-15 (월간 제한 추가)
  */
 class CheckHabitMilestoneUseCase @Inject constructor(
     private val habitRepository: HabitRepository,
     private val rewardHabitCompletionUseCase: RewardHabitCompletionUseCase,
+    private val validateMonthlyHabitCoinsUseCase: ValidateMonthlyHabitCoinsUseCase,  // 🆕 추가
     private val firestore: FirebaseFirestore
 ) {
     companion object {
@@ -56,7 +62,7 @@ class CheckHabitMilestoneUseCase @Inject constructor(
             }
 
             // 3. 현재 streak에 해당하는 마일스톤 찾기
-            val milestone = HabitMilestones.getMilestone(currentStreak)
+            val milestone = HabitLimits.getMilestone(currentStreak)
             if (milestone == null) {
                 Log.d(TAG, "해당 streak에 마일스톤 없음")
                 return Result.success(null)
@@ -77,12 +83,28 @@ class CheckHabitMilestoneUseCase @Inject constructor(
                 return Result.success(null)
             }
 
-            // 6. 코인 지급
+            // 🆕 6. 월간 코인 제한 검증
+            Log.d(TAG, "월간 코인 제한 검증 중...")
+            val monthlyValidation = validateMonthlyHabitCoinsUseCase(
+                userId = userId,
+                additionalCoins = milestone.coins
+            )
+
+            if (monthlyValidation.isFailure) {
+                val error = monthlyValidation.exceptionOrNull()
+                Log.w(TAG, "❌ 월간 코인 제한 초과", error)
+                return Result.failure(
+                    error ?: Exception("월간 코인 제한 초과")
+                )
+            }
+            Log.d(TAG, "✅ 월간 코인 제한 통과")
+
+            // 7. 코인 지급
             Log.d(TAG, "💰 코인 지급 시작...")
             val rewardResult = rewardHabitCompletionUseCase(
                 userId = userId,
                 habitId = habitId,
-                coins = milestone.coins  // 🆕 명확하게 coins로 전달
+                coins = milestone.coins
             )
 
             if (rewardResult.isFailure) {
@@ -90,10 +112,16 @@ class CheckHabitMilestoneUseCase @Inject constructor(
                 return Result.failure(rewardResult.exceptionOrNull() ?: Exception("코인 지급 실패"))
             }
 
-            // 7. 습관의 lastRewardStreak 업데이트
+            // 🆕 8. 월간 코인 기록 업데이트
+            validateMonthlyHabitCoinsUseCase.recordMonthlyCoins(
+                userId = userId,
+                coins = milestone.coins
+            )
+
+            // 9. 습관의 lastRewardStreak 업데이트
             updateHabitRewardInfo(habitId, currentStreak)
 
-            // 8. 보상 기록 저장 (중복 지급 방지)
+            // 10. 보상 기록 저장 (중복 지급 방지)
             saveRewardRecord(habitId, userId, currentStreak, milestone.coins)
 
             Log.d(TAG, "🎉 마일스톤 달성 완료! ${milestone.coins}코인 지급됨")

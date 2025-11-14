@@ -1,17 +1,18 @@
 package com.buyoungsil.checkcheck.feature.home
 
 import com.buyoungsil.checkcheck.feature.group.domain.model.Group
-import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
-import com.buyoungsil.checkcheck.feature.task.domain.model.Task
 
+/**
+ * 홈 화면 UI State
+ *
+ * ✅ 리팩토링: 단일 책임 원칙 적용
+ * - 습관 관련 제거 (HabitListViewModel로 이동)
+ * - 태스크 관련 제거 (TaskListViewModel로 이동)
+ * - 그룹 + 코인만 관리
+ */
 data class HomeUiState(
-    val habits: List<HabitWithStats> = emptyList(),
     val groups: List<Group> = emptyList(),
-    val urgentTasks: List<Task> = emptyList(),
-    val personalTasks: List<Task> = emptyList(),
-    val todayCompletedCount: Int = 0,
-    val todayTotalCount: Int = 0,
-    val totalCoins: Int = 0,  // ✅ 추가
+    val totalCoins: Int = 0,
     val isLoading: Boolean = true,
     val error: String? = null
 )

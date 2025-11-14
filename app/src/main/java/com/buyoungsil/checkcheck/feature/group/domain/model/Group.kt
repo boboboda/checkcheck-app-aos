@@ -5,6 +5,7 @@ data class Group(
     val name: String,
     val icon: String = "👥",
     val type: GroupType = GroupType.CUSTOM,
+    val description: String = "",
     val inviteCode: String,
     val ownerId: String,
     val memberIds: List<String> = emptyList(),

@@ -301,6 +301,7 @@ fun HabitListScreen(
                                         streak = habitWithStats.statistics?.currentStreak ?: 0,
                                         completionRate = habitWithStats.statistics?.completionRate ?: 0f,
                                         habitIcon = habitWithStats.habit.icon,
+                                        nextMilestoneInfo = habitWithStats.nextMilestoneInfo,  // 🆕 이 줄 추가
                                         onCheck = {
                                             viewModel.onHabitCheck(habitWithStats.habit.id)
                                         }

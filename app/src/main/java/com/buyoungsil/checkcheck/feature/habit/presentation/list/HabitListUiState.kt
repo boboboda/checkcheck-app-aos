@@ -5,22 +5,25 @@ import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitStatistics
 
 /**
  * 습관 목록 UI State
- * ✅ 마일스톤 달성 메시지 추가
+ *
+ * 🆕 infoMessage 추가 - 이미 체크 완료 등의 안내 메시지
  */
 data class HabitListUiState(
     val habits: List<HabitWithStats> = emptyList(),
     val loading: Boolean = true,
     val error: String? = null,
-    val milestoneMessage: MilestoneMessage? = null  // 🆕 마일스톤 달성 메시지
+    val milestoneMessage: MilestoneMessage? = null,
+    val infoMessage: String? = null  // 🆕 추가
 )
 
 /**
- * 통계와 함께 있는 습관
+ * 습관 + 통계 데이터 클래스
  */
 data class HabitWithStats(
     val habit: Habit,
-    val statistics: HabitStatistics? = null,
-    val isCheckedToday: Boolean = false
+    val statistics: HabitStatistics?,
+    val isCheckedToday: Boolean,
+    val nextMilestoneInfo: NextMilestoneInfo? = null
 )
 
 /**
@@ -31,3 +34,4 @@ data class MilestoneMessage(
     val streakDays: Int,
     val coinsAwarded: Int
 )
+
