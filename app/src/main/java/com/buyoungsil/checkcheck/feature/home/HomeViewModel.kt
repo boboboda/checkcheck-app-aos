@@ -11,16 +11,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * 홈 화면 ViewModel
- *
- * ✅ 리팩토링: 단일 책임 원칙 적용
- * - 습관 로직 → HabitListViewModel
- * - 태스크 로직 → TaskListViewModel (별도 생성 필요)
- * - 홈 화면은 그룹 목록 + 코인만 관리
- *
- * @since 2025-01-15 (리팩토링)
- */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getMyGroupsUseCase: GetMyGroupsUseCase,
@@ -44,19 +34,14 @@ class HomeViewModel @Inject constructor(
         loadData()
     }
 
-    /**
-     * 홈 화면 데이터 로딩
-     * - 그룹 목록
-     * - 코인 지갑
-     */
     private fun loadData() {
         Log.d(TAG, "=== 홈 데이터 로딩 시작 ===")
 
+        // ✅ 그룹 목록 로딩 (별도 launch)
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
             try {
-                // 1. 그룹 목록 로딩
                 getMyGroupsUseCase(currentUserId)
                     .drop(1)  // 첫 빈 emit 무시
                     .catch { e ->
@@ -71,8 +56,20 @@ class HomeViewModel @Inject constructor(
                             )
                         }
                     }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ 그룹 로딩 실패", e)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = e.message ?: "그룹 로딩 실패"
+                    )
+                }
+            }
+        }
 
-                // 2. 코인 지갑 로딩
+        // ✅ 코인 지갑 로딩 (별도 launch로 분리!)
+        viewModelScope.launch {
+            try {
                 getCoinWalletUseCase(currentUserId)
                     .catch { e ->
                         Log.e(TAG, "❌ 코인 지갑 로딩 실패", e)
@@ -81,31 +78,22 @@ class HomeViewModel @Inject constructor(
                         if (wallet != null) {
                             Log.d(TAG, "✅ 코인 지갑 로드: ${wallet.totalCoins}코인")
                             _uiState.update { it.copy(totalCoins = wallet.totalCoins) }
+                        } else {
+                            Log.d(TAG, "⚠️ 코인 지갑이 null (아직 생성 안됨)")
+                            _uiState.update { it.copy(totalCoins = 0) }
                         }
                     }
-
             } catch (e: Exception) {
-                Log.e(TAG, "❌ 홈 데이터 로딩 실패", e)
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = e.message ?: "데이터 로딩 실패"
-                    )
-                }
+                Log.e(TAG, "❌ 코인 지갑 로딩 실패", e)
+                _uiState.update { it.copy(totalCoins = 0) }
             }
         }
     }
 
-    /**
-     * 에러 상태 초기화
-     */
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }
 
-    /**
-     * 다시 시도
-     */
     fun onRetry() {
         Log.d(TAG, "다시 시도")
         loadData()

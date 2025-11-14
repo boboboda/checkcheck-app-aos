@@ -60,6 +60,9 @@ fun NavGraph(
                 },
                 onNavigateToDebug = {
                     navController.navigate("debug_test")
+                },
+                onNavigateToPersonalTaskList = {
+                    navController.navigate(Screen.TaskList.route)
                 }
             )
         }
