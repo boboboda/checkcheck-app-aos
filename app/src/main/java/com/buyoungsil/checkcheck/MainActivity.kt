@@ -1,6 +1,7 @@
 package com.buyoungsil.checkcheck
 
 import android.Manifest
+import android.content.ContentValues.TAG
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -150,18 +151,32 @@ class MainActivity : ComponentActivity() {
                         Scaffold(
                             bottomBar = {
                                 if (shouldShowBottomBar(currentRoute)) {
+                                    Log.d(TAG, "BottomBar 표시 중 - currentRoute: $currentRoute") // ✅ 로그 추가
+
                                     BottomNavigationBar(
                                         currentRoute = currentRoute,
                                         onNavigate = { route ->
-                                            navController.navigate(route) {
-                                                popUpTo(Screen.Home.route) {
-                                                    saveState = true
+                                            Log.d(TAG, "탭바 클릭 - from: $currentRoute, to: $route") // ✅ 로그 추가
+
+                                            if (currentRoute != route) {
+                                                Log.d(TAG, "네비게이션 시작: $route") // ✅ 로그 추가
+
+                                                navController.navigate(route) {
+                                                    popUpTo(navController.graph.startDestinationId) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
                                                 }
-                                                launchSingleTop = true
-                                                restoreState = true
+
+                                                Log.d(TAG, "네비게이션 완료: $route") // ✅ 로그 추가
+                                            } else {
+                                                Log.d(TAG, "같은 탭 재클릭 무시: $route") // ✅ 로그 추가
                                             }
                                         }
                                     )
+                                } else {
+                                    Log.d(TAG, "BottomBar 숨김 - currentRoute: $currentRoute") // ✅ 로그 추가
                                 }
                             },
                             containerColor = OrangeBackground
@@ -248,6 +263,11 @@ private fun BottomNavigationBar(
     currentRoute: String?,
     onNavigate: (String) -> Unit
 ) {
+
+
+
+    Log.d(TAG, "BottomNavigationBar 렌더링 - currentRoute: $currentRoute") // ✅ 로그 추가
+
     NavigationBar(
         containerColor = Color.White,
         contentColor = OrangePrimary,
@@ -258,7 +278,10 @@ private fun BottomNavigationBar(
             selectedIcon = Icons.Filled.Home,
             label = "홈",
             selected = currentRoute == Screen.Home.route,
-            onClick = { onNavigate(Screen.Home.route) }
+            onClick = {
+                Log.d(TAG, "홈 탭 클릭됨") // ✅ 로그 추가
+                onNavigate(Screen.Home.route)
+            }
         )
 
         NavigationItem(
@@ -266,7 +289,10 @@ private fun BottomNavigationBar(
             selectedIcon = Icons.Filled.People,
             label = "그룹",
             selected = currentRoute == Screen.GroupList.route,
-            onClick = { onNavigate(Screen.GroupList.route) }
+            onClick = {
+                Log.d(TAG, "그룹 탭 클릭됨") // ✅ 로그 추가
+                onNavigate(Screen.GroupList.route)
+            }
         )
 
         NavigationItem(
@@ -274,10 +300,20 @@ private fun BottomNavigationBar(
             selectedIcon = Icons.Filled.BarChart,
             label = "통계",
             selected = currentRoute == Screen.Statistics.route,
-            onClick = { onNavigate(Screen.Statistics.route) }
+            onClick = {
+                Log.d(TAG, "통계 탭 클릭됨") // ✅ 로그 추가
+                onNavigate(Screen.Statistics.route)
+            }
         )
     }
 }
+
+
+
+
+
+
+
 
 /**
  * 네비게이션 아이템

@@ -30,12 +30,15 @@ sealed class Screen(val route: String) {
     object TaskCreate : Screen("task_create/{groupId}") {
         fun createRoute(groupId: String) = "task_create/$groupId"
     }
+
+    // ✅ 개인 할일 관련 라우트
+    object PersonalTaskList : Screen("personal_task_list")  // ✅ 새로 추가
     object PersonalTaskCreate : Screen("personal_task_create")
 
     // Statistics
     object Statistics : Screen("statistics")
 
-    // Settings (✨ 추가)
+    // Settings
     object Settings : Screen("settings")
     object LinkAccount : Screen("link_account")
 

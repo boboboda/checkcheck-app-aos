@@ -41,7 +41,14 @@ fun NavGraph(
                     navController.navigate(Screen.HabitCreate.createRoute())
                 },
                 onNavigateToGroupList = {
-                    navController.navigate(Screen.GroupList.route)
+                    // ✅ 하단 탭바처럼 popUpTo 추가
+                    navController.navigate(Screen.GroupList.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 },
                 onNavigateToGroupDetail = { groupId ->
                     navController.navigate(Screen.GroupDetail.createRoute(groupId))
@@ -49,20 +56,20 @@ fun NavGraph(
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
                 },
-                onNavigateToHabitList = {  // ✅ 추가
+                onNavigateToHabitList = {
                     navController.navigate(Screen.HabitList.route)
                 },
-                onNavigateToPersonalTaskCreate = {  // ✅ 추가
+                onNavigateToPersonalTaskCreate = {
                     navController.navigate(Screen.PersonalTaskCreate.route)
                 },
-                onNavigateToCoinWallet = {  // ✅ 코인 지갑 추가
+                onNavigateToPersonalTaskList = {  // ✅ 수정: PersonalTaskList로 이동
+                    navController.navigate(Screen.PersonalTaskList.route)
+                },
+                onNavigateToCoinWallet = {
                     navController.navigate(Screen.CoinWallet.route)
                 },
                 onNavigateToDebug = {
                     navController.navigate("debug_test")
-                },
-                onNavigateToPersonalTaskList = {
-                    navController.navigate(Screen.TaskList.route)
                 }
             )
         }
@@ -73,7 +80,7 @@ fun NavGraph(
                 onNavigateToCreate = {
                     navController.navigate(Screen.HabitCreate.createRoute())
                 },
-                onNavigateBack = {  // ✅ 이미 추가했어야 함
+                onNavigateBack = {
                     navController.popBackStack()
                 }
             )
@@ -149,20 +156,40 @@ fun NavGraph(
         }
 
         // ========== Task 화면들 ==========
+
+        // ✅ 개인 할일 리스트 - 새로 추가
+        composable(Screen.PersonalTaskList.route) {
+            TaskListScreen(
+                groupId = null,  // null = 개인 모드
+                onNavigateToCreate = {
+                    navController.navigate(Screen.PersonalTaskCreate.route)
+                },
+                onNavigateBack = {  // ✅ 뒤로가기 추가
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // 그룹 할일 리스트
         composable(
             route = Screen.TaskList.route,
             arguments = listOf(
                 navArgument("groupId") { type = NavType.StringType }
             )
-        ) {
+        ) { backStackEntry ->
+            val groupId = backStackEntry.arguments?.getString("groupId") ?: ""
             TaskListScreen(
+                groupId = groupId,
                 onNavigateToCreate = {
-                    val groupId = it.arguments?.getString("groupId") ?: ""
                     navController.navigate(Screen.TaskCreate.createRoute(groupId))
+                },
+                onNavigateBack = {  // ✅ 뒤로가기 추가
+                    navController.popBackStack()
                 }
             )
         }
 
+        // 그룹 할일 생성
         composable(
             route = Screen.TaskCreate.route,
             arguments = listOf(
@@ -176,12 +203,21 @@ fun NavGraph(
             )
         }
 
+        // ✅ 개인 할일 생성
+        composable(Screen.PersonalTaskCreate.route) {
+            CreateTaskScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         // ========== 통계 ==========
         composable(Screen.Statistics.route) {
             StatisticsScreen()
         }
 
-        // ========== 설정 (✨ 추가) ==========
+        // ========== 설정 ==========
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onNavigateToLogin = {
@@ -193,22 +229,13 @@ fun NavGraph(
             )
         }
 
-        // ========== 계정 연동 (✨ 추가) ==========
+        // ========== 계정 연동 ==========
         composable(Screen.LinkAccount.route) {
             LinkAccountScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
                 onSuccess = {
-                    // 연동 성공 시 설정 화면으로 돌아가기
-                    navController.popBackStack()
-                }
-            )
-        }
-
-        composable(Screen.PersonalTaskCreate.route) {
-            CreateTaskScreen(
-                onNavigateBack = {
                     navController.popBackStack()
                 }
             )
@@ -223,6 +250,7 @@ fun NavGraph(
             )
         }
 
+        // ========== 디버그 (개발 모드만) ==========
         if (BuildConfig.DEBUG) {
             composable("debug_test") {
                 DebugTestScreen(

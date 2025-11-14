@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
@@ -31,7 +32,8 @@ fun GroupListScreen(
     viewModel: GroupListViewModel = hiltViewModel(),
     onNavigateToCreate: () -> Unit,
     onNavigateToJoin: () -> Unit,
-    onNavigateToDetail: (String) -> Unit
+    onNavigateToDetail: (String) -> Unit,
+    onNavigateBack: (() -> Unit)? = null  // ✅ 추가 (뒤로가기 콜백)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showLeaveDialog by remember { mutableStateOf<String?>(null) }
@@ -45,6 +47,17 @@ fun GroupListScreen(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
+                },
+                // ✅ 추가: 뒤로가기 버튼
+                navigationIcon = {
+                    if (onNavigateBack != null) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "뒤로가기"
+                            )
+                        }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = OrangeBackground,

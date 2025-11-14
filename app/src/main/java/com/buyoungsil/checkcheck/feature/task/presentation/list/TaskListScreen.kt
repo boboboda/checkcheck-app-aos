@@ -1,9 +1,16 @@
+// TaskListScreen.kt - 기존 코드에 최소한만 수정
+// 수정 사항:
+// 1. 함수 시그니처에 groupId, onNavigateBack 파라미터 추가
+// 2. TopAppBar에 뒤로가기 버튼만 추가
+// 3. 나머지는 모두 기존 코드 유지
+
 package com.buyoungsil.checkcheck.feature.task.presentation.list
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack  // ✅ 추가
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,22 +30,38 @@ import com.buyoungsil.checkcheck.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListScreen(
+    groupId: String? = null,  // ✅ 추가 (null이면 개인 모드)
     viewModel: TaskListViewModel = hiltViewModel(),
-    onNavigateToCreate: () -> Unit
+    onNavigateToCreate: () -> Unit,
+    onNavigateBack: (() -> Unit)? = null  // ✅ 추가 (뒤로가기 콜백)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
+
+    // ✅ 개인 모드 여부 확인
+    val isPersonalMode = groupId == null
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "그룹 할일",
+                        text = if (isPersonalMode) "나의 할일" else "그룹 할일",  // ✅ 수정
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimaryLight
                     )
+                },
+                // ✅ 추가: 뒤로가기 버튼
+                navigationIcon = {
+                    if (onNavigateBack != null) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "뒤로가기"
+                            )
+                        }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = OrangeBackground,
@@ -139,7 +162,7 @@ fun TaskListScreen(
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         Text(
-                            text = "아직 할일이 없어요",
+                            text = if (isPersonalMode) "아직 나의 할일이 없어요" else "아직 할일이 없어요",  // ✅ 수정
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimaryLight
@@ -165,7 +188,7 @@ fun TaskListScreen(
                 }
 
                 else -> {
-                    // 할일 목록
+                    // 할일 목록 - 기존 코드 그대로 유지
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(20.dp),
