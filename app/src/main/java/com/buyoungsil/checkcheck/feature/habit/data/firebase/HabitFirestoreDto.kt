@@ -7,8 +7,7 @@ import java.util.Date
 
 /**
  * Firestore용 Habit DTO
- * ✅ 알림 필드 제거
- * ✅ isGroupChallenge 추가
+ * ✅ 코인 보상 필드 추가
  */
 data class HabitFirestoreDto(
     @DocumentId
@@ -20,7 +19,13 @@ data class HabitFirestoreDto(
     val color: String = "#6650a4",
     val groupShared: Boolean = false,
     val groupId: String? = null,
-    val isGroupChallenge: Boolean = false,  // ✅ 추가
+    val isGroupChallenge: Boolean = false,
+
+    // 🆕 코인 보상 필드
+    val coinRewardEnabled: Boolean = true,
+    val lastRewardStreak: Int = 0,
+    val lastRewardDate: Long? = null,
+
     @ServerTimestamp
     val createdAt: Date? = null,
     val active: Boolean = true
@@ -34,7 +39,10 @@ data class HabitFirestoreDto(
         color = "#6650a4",
         groupShared = false,
         groupId = null,
-        isGroupChallenge = false,  // ✅ 추가
+        isGroupChallenge = false,
+        coinRewardEnabled = true, // 🆕
+        lastRewardStreak = 0,     // 🆕
+        lastRewardDate = null,    // 🆕
         createdAt = null,
         active = true
     )
@@ -49,7 +57,10 @@ data class HabitFirestoreDto(
             color = color,
             groupShared = groupShared,
             groupId = groupId,
-            isGroupChallenge = isGroupChallenge,  // ✅ 추가
+            isGroupChallenge = isGroupChallenge,
+            coinRewardEnabled = coinRewardEnabled,     // 🆕
+            lastRewardStreak = lastRewardStreak,       // 🆕
+            lastRewardDate = lastRewardDate,           // 🆕
             createdAt = createdAt?.time ?: System.currentTimeMillis(),
             updatedAt = createdAt?.time ?: System.currentTimeMillis(),
             active = active
@@ -67,7 +78,10 @@ data class HabitFirestoreDto(
                 color = habit.color,
                 groupShared = habit.groupShared,
                 groupId = habit.groupId,
-                isGroupChallenge = habit.isGroupChallenge,  // ✅ 추가
+                isGroupChallenge = habit.isGroupChallenge,
+                coinRewardEnabled = habit.coinRewardEnabled,   // 🆕
+                lastRewardStreak = habit.lastRewardStreak,     // 🆕
+                lastRewardDate = habit.lastRewardDate,         // 🆕
                 createdAt = Date(habit.createdAt),
                 active = habit.active
             )

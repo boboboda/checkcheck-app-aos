@@ -5,12 +5,13 @@ import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitStatistics
 
 /**
  * 습관 목록 UI State
- * ✅ isLoading → loading 통일
+ * ✅ 마일스톤 달성 메시지 추가
  */
 data class HabitListUiState(
     val habits: List<HabitWithStats> = emptyList(),
-    val loading: Boolean = true,  // ✅ isLoading → loading
-    val error: String? = null
+    val loading: Boolean = true,
+    val error: String? = null,
+    val milestoneMessage: MilestoneMessage? = null  // 🆕 마일스톤 달성 메시지
 )
 
 /**
@@ -20,4 +21,13 @@ data class HabitWithStats(
     val habit: Habit,
     val statistics: HabitStatistics? = null,
     val isCheckedToday: Boolean = false
+)
+
+/**
+ * 마일스톤 달성 메시지
+ */
+data class MilestoneMessage(
+    val habitTitle: String,
+    val streakDays: Int,
+    val coinsAwarded: Int
 )

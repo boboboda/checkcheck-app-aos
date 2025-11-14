@@ -7,8 +7,10 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.buyoungsil.checkcheck.BuildConfig
 import com.buyoungsil.checkcheck.feature.auth.presentation.link.LinkAccountScreen
 import com.buyoungsil.checkcheck.feature.coin.presentation.wallet.CoinWalletScreen
+import com.buyoungsil.checkcheck.feature.debug.DebugTestScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.create.CreateGroupScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.detail.GroupDetailScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.join.JoinGroupScreen
@@ -55,6 +57,9 @@ fun NavGraph(
                 },
                 onNavigateToCoinWallet = {  // ✅ 코인 지갑 추가
                     navController.navigate(Screen.CoinWallet.route)
+                },
+                onNavigateToDebug = {
+                    navController.navigate("debug_test")
                 }
             )
         }
@@ -213,6 +218,14 @@ fun NavGraph(
                     navController.popBackStack()
                 }
             )
+        }
+
+        if (BuildConfig.DEBUG) {
+            composable("debug_test") {
+                DebugTestScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

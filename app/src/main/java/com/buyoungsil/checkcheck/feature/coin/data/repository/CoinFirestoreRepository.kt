@@ -34,8 +34,6 @@ class CoinFirestoreRepository @Inject constructor(
         Log.d(TAG, "=== getCoinWallet Flow 시작 ===")
         Log.d(TAG, "userId: $userId")
 
-        // 즉시 null emit (무한 로딩 방지)
-        trySend(null)
 
         val listener = walletsCollection.document(userId)
             .addSnapshotListener { snapshot, error ->
@@ -45,7 +43,8 @@ class CoinFirestoreRepository @Inject constructor(
                     return@addSnapshotListener
                 }
 
-                val wallet = snapshot?.toObject(CoinWalletFirestoreDto::class.java)?.toDomain()
+                // 🆕 userId를 파라미터로 전달
+                val wallet = snapshot?.toObject(CoinWalletFirestoreDto::class.java)?.toDomain(userId)
                 Log.d(TAG, "✅ getCoinWallet 데이터 수신: ${wallet?.totalCoins ?: 0}코인")
                 trySend(wallet)
             }
@@ -92,12 +91,23 @@ class CoinFirestoreRepository @Inject constructor(
         }
     }
 
+
     override suspend fun createCoinWallet(userId: String): Result<Unit> {
         return try {
             Log.d(TAG, "========================================")
             Log.d(TAG, "💰 코인 지갑 생성 시작")
             Log.d(TAG, "userId: $userId")
 
+            // ✅ 1. 먼저 지갑이 있는지 확인
+            val existingWallet = walletsCollection.document(userId).get().await()
+
+            if (existingWallet.exists()) {
+                Log.d(TAG, "⚠️ 이미 코인 지갑이 존재함 - 건너뜀")
+                Log.d(TAG, "========================================")
+                return Result.success(Unit)
+            }
+
+            // ✅ 2. 없을 때만 생성
             val wallet = CoinWallet(userId = userId)
             val dto = CoinWalletFirestoreDto.fromDomain(wallet)
 

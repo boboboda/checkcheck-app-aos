@@ -21,9 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.buyoungsil.checkcheck.feature.group.domain.model.GroupMember
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
@@ -31,13 +29,13 @@ import com.buyoungsil.checkcheck.ui.theme.*
  */
 @Composable
 fun GiftCoinDialog(
-    members: List<GroupMember>,
+    members: List<MemberWithGroup>, // 🆕 타입 변경
     currentUserId: String,
     currentBalance: Int,
     onDismiss: () -> Unit,
     onGift: (toUserId: String, amount: Int, message: String?) -> Unit
 ) {
-    var selectedMember by remember { mutableStateOf<GroupMember?>(null) }
+    var selectedMember by remember { mutableStateOf<MemberWithGroup?>(null) } // 🆕
     var amount by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf<String?>(null) }
@@ -92,13 +90,13 @@ fun GiftCoinDialog(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = OrangePrimary.copy(alpha = 0.1f)
+                        containerColor = OrangeSurfaceVariant
                     )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp),
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -107,34 +105,24 @@ fun GiftCoinDialog(
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondaryLight
                         )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = currentBalance.toString(),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = OrangePrimary
-                            )
-                            Text(
-                                text = "💰",
-                                fontSize = 20.sp
-                            )
-                        }
+                        Text(
+                            text = "${currentBalance}코인",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = OrangePrimary
+                        )
                     }
                 }
 
-                HorizontalDivider(color = DividerLight)
-
-                // 받는 사람 선택
+                // 멤버 선택 섹션
                 Text(
-                    text = "받는 사람",
+                    text = "📋 멤버 선택",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryLight
                 )
 
+                // 멤버 목록이 비어있을 때
                 if (filteredMembers.isEmpty()) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -192,25 +180,27 @@ fun GiftCoinDialog(
                                     keyboardType = KeyboardType.Number
                                 ),
                                 singleLine = true,
+                                isError = showError != null,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = OrangePrimary,
                                     unfocusedBorderColor = DividerLight
-                                ),
-                                suffix = {
-                                    Text(
-                                        text = "💰",
-                                        fontSize = 18.sp
-                                    )
-                                }
+                                )
                             )
+                            if (showError != null) {
+                                Text(
+                                    text = showError!!,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
 
-                        // 메시지 입력 (선택사항)
+                        // 메시지 입력
                         Column(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "메시지 (선택)",
+                                text = "메시지 (선택사항)",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimaryLight
@@ -220,7 +210,7 @@ fun GiftCoinDialog(
                                 onValueChange = { message = it },
                                 modifier = Modifier.fillMaxWidth(),
                                 placeholder = { Text("응원의 메시지를 남겨보세요") },
-                                maxLines = 3,
+                                maxLines = 2,
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = OrangePrimary,
                                     unfocusedBorderColor = DividerLight
@@ -230,22 +220,12 @@ fun GiftCoinDialog(
                     }
                 }
 
-                // 에러 메시지
-                showError?.let { error ->
-                    Text(
-                        text = error,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = ErrorRed
-                    )
-                }
-
-                HorizontalDivider(color = DividerLight)
-
-                // 버튼
+                // 버튼 영역
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // 취소 버튼
                     OutlinedButton(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f),
@@ -254,29 +234,27 @@ fun GiftCoinDialog(
                             contentColor = TextSecondaryLight
                         )
                     ) {
-                        Text("취소")
+                        Text(
+                            text = "취소",
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
+                    // 선물하기 버튼
                     Button(
                         onClick = {
-                            // 유효성 검사
+                            val amountInt = amount.toIntOrNull()
                             when {
-                                selectedMember == null -> {
-                                    showError = "받는 사람을 선택해주세요"
+                                amountInt == null || amountInt <= 0 -> {
+                                    showError = "1 이상의 코인을 입력하세요"
                                 }
-                                amount.isEmpty() -> {
-                                    showError = "코인 수량을 입력해주세요"
-                                }
-                                amount.toIntOrNull() == null || amount.toInt() <= 0 -> {
-                                    showError = "코인은 1개 이상이어야 합니다"
-                                }
-                                amount.toInt() > currentBalance -> {
+                                amountInt > currentBalance -> {
                                     showError = "잔액이 부족합니다"
                                 }
                                 else -> {
                                     onGift(
                                         selectedMember!!.userId,
-                                        amount.toInt(),
+                                        amountInt,
                                         message.takeIf { it.isNotBlank() }
                                     )
                                     onDismiss()
@@ -307,7 +285,7 @@ fun GiftCoinDialog(
  */
 @Composable
 private fun MemberItem(
-    member: GroupMember,
+    member: MemberWithGroup, // 🆕 타입 변경
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -360,18 +338,21 @@ private fun MemberItem(
                 )
             }
 
-            // 이름
+            // 이름 및 그룹 정보
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
                     text = member.displayName,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
-                    color = if (isSelected) OrangePrimary else TextPrimaryLight
+                    color = TextPrimaryLight
                 )
+
+                // 🆕 그룹 이름 표시
                 Text(
-                    text = member.role.name,
+                    text = member.groupName,
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondaryLight
                 )

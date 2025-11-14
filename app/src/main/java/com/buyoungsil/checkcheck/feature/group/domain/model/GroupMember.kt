@@ -6,7 +6,9 @@ data class GroupMember(
     val displayName: String,
     val photoUrl: String? = null,
     val role: MemberRole = MemberRole.MEMBER,
-    val joinedAt: Long = System.currentTimeMillis()
+    val joinedAt: Long = System.currentTimeMillis(),
+    // 🆕 그룹 이름 추가 (UI 표시용)
+    val groupName: String = ""  // "가족", "회사" 등
 )
 
 enum class MemberRole {

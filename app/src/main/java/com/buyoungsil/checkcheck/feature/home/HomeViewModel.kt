@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
+import com.buyoungsil.checkcheck.feature.coin.domain.usecase.GetCoinWalletUseCase
 import com.buyoungsil.checkcheck.feature.group.domain.model.Group
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetMyGroupsUseCase
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.LeaveGroupUseCase
@@ -36,6 +37,7 @@ class HomeViewModel @Inject constructor(
     private val leaveGroupUseCase: LeaveGroupUseCase,
     private val authManager: FirebaseAuthManager,
     private val getPersonalTasksUseCase: GetPersonalTasksUseCase,
+    private val getCoinWalletUseCase: GetCoinWalletUseCase,
 ) : ViewModel() {
 
     companion object {
@@ -61,13 +63,23 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
 
             try {
-                // ✅ 1. 습관 + 그룹 + 개인 할일을 combine으로 동시 로드
+                // ✅ 1. 습관 + 그룹 + 개인 할일 + 코인을 combine으로 동시 로드
                 combine(
                     getPersonalHabitsUseCase(currentUserId),
                     getMyGroupsUseCase(currentUserId),
                     repository.getChecksByUserAndDate(currentUserId, LocalDate.now()),
-                    getPersonalTasksUseCase(currentUserId)  // ✅ 추가
-                ) { habits, groups, todayChecks, personalTasks ->  // ✅ personalTasks 추가
+                    getPersonalTasksUseCase(currentUserId),
+                    getCoinWalletUseCase(currentUserId)  // ✅ 코인 추가
+                ) { habits, groups, todayChecks, personalTasks, coinWallet ->
+
+                    // ✅ 코인 로그 추가
+                    Log.d(TAG, "========================================")
+                    Log.d(TAG, "💰 combine 내부 - 코인 데이터 수신")
+                    Log.d(TAG, "coinWallet: $coinWallet")
+                    Log.d(TAG, "coinWallet?.totalCoins: ${coinWallet?.totalCoins}")
+                    Log.d(TAG, "coinWallet?.familyCoins: ${coinWallet?.familyCoins}")
+                    Log.d(TAG, "coinWallet?.rewardCoins: ${coinWallet?.rewardCoins}")
+                    Log.d(TAG, "========================================")
 
                     val habitsWithStats = habits.map { habit ->
                         val stats = getHabitStatisticsUseCase(habit.id).getOrNull()
@@ -80,16 +92,23 @@ class HomeViewModel @Inject constructor(
                         )
                     }
 
-                    // ✅ Quad로 변경 (4개 반환)
-                    QuadData(habitsWithStats, groups, todayChecks.size, personalTasks)
+                    // ✅ 코인 정보 추출 (coinWallet은 CoinWallet? 타입)
+                    val totalCoins = coinWallet?.totalCoins ?: 0
+
+                    Log.d(TAG, "💰 추출된 totalCoins: $totalCoins")
+
+                    // ✅ QuintData로 변경 (5개 반환)
+                    QuintData(habitsWithStats, groups, todayChecks.size, personalTasks, totalCoins)
                 }
-                    .flatMapLatest { quadData ->
-                        val (habitsWithStats, groups, todayCompletedCount, personalTasks) = quadData
+                    .flatMapLatest { quintData ->
+                        val (habitsWithStats, groups, todayCompletedCount, personalTasks, totalCoins) = quintData
+
+                        Log.d(TAG, "💰 flatMapLatest - totalCoins: $totalCoins")
 
                         // ✅ 2. 모든 그룹의 할일을 combine으로 실시간 구독
                         if (groups.isEmpty()) {
                             // 그룹이 없으면 빈 리스트 Flow 반환
-                            flowOf(QuadData(habitsWithStats, emptyList<Task>(), todayCompletedCount, personalTasks))
+                            flowOf(QuintData(habitsWithStats, emptyList<Task>(), todayCompletedCount, personalTasks, totalCoins))
                         } else {
                             // 모든 그룹의 할일을 combine으로 합치기
                             combine(
@@ -118,13 +137,15 @@ class HomeViewModel @Inject constructor(
                                     )
 
                                 Log.d(TAG, "전체 긴급 할일: ${sortedUrgentTasks.size}개")
+                                Log.d(TAG, "💰 combine 내부 2 - totalCoins: $totalCoins")
 
-                                QuadData(habitsWithStats, sortedUrgentTasks, todayCompletedCount, personalTasks)
+                                QuintData(habitsWithStats, sortedUrgentTasks, todayCompletedCount, personalTasks, totalCoins)
                             }
                         }
                     }
                     .catch { e ->
                         Log.e(TAG, "❌ 데이터 로드 실패", e)
+                        Log.e(TAG, "❌ 에러 스택트레이스:", e)
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -132,29 +153,35 @@ class HomeViewModel @Inject constructor(
                             )
                         }
                     }
-                    .collect { quadData ->
-                        val (habitsWithStats, urgentTasks, todayCompletedCount, personalTasks) = quadData
+                    .collect { quintData ->
+                        val (habitsWithStats, urgentTasks, todayCompletedCount, personalTasks, totalCoins) = quintData
 
                         Log.d(TAG, "=== UI 업데이트 ===")
                         Log.d(TAG, "습관: ${habitsWithStats.size}개")
                         Log.d(TAG, "긴급 할일: ${urgentTasks.size}개")
-                        Log.d(TAG, "개인 할일: ${personalTasks.size}개")  // ✅ 로그 추가
+                        Log.d(TAG, "개인 할일: ${personalTasks.size}개")
+                        Log.d(TAG, "💰💰💰 최종 코인: ${totalCoins}개")  // ✅ 강조 로그
+                        Log.d(TAG, "========================================")
 
                         _uiState.update {
                             it.copy(
                                 habits = habitsWithStats,
                                 urgentTasks = urgentTasks,
-                                personalTasks = personalTasks,  // ✅ 추가
+                                personalTasks = personalTasks,
                                 todayCompletedCount = todayCompletedCount,
                                 todayTotalCount = habitsWithStats.size,
+                                totalCoins = totalCoins,  // ✅ 코인 업데이트
                                 isLoading = false,
                                 error = null
                             )
                         }
+
+                        Log.d(TAG, "💰 uiState 업데이트 후 - totalCoins: ${_uiState.value.totalCoins}")
                     }
 
             } catch (e: Exception) {
                 Log.e(TAG, "❌ loadData 실패", e)
+                Log.e(TAG, "❌ 에러 상세:", e)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -166,17 +193,23 @@ class HomeViewModel @Inject constructor(
     }
 
     // ✅ 헬퍼 데이터 클래스 추가 (HomeViewModel 내부 또는 외부)
-    data class QuadData<A, B, C, D>(
+    data class QuintData<A, B, C, D, E>(
         val first: A,
         val second: B,
         val third: C,
-        val fourth: D
+        val fourth: D,
+        val fifth: E
     )
 
-    operator fun <A, B, C, D> QuadData<A, B, C, D>.component1() = first
-    operator fun <A, B, C, D> QuadData<A, B, C, D>.component2() = second
-    operator fun <A, B, C, D> QuadData<A, B, C, D>.component3() = third
-    operator fun <A, B, C, D> QuadData<A, B, C, D>.component4() = fourth
+    operator fun <A, B, C, D, E> QuintData<A, B, C, D, E>.component1() = first
+    operator fun <A, B, C, D, E> QuintData<A, B, C, D, E>.component2() = second
+    operator fun <A, B, C, D, E> QuintData<A, B, C, D, E>.component3() = third
+    operator fun <A, B, C, D, E> QuintData<A, B, C, D, E>.component4() = fourth
+    operator fun <A, B, C, D, E> QuintData<A, B, C, D, E>.component5() = fifth
+
+
+
+
     fun onHabitCheck(habitId: String) {
         viewModelScope.launch {
             Log.d(TAG, "습관 체크 시작: habitId=$habitId")

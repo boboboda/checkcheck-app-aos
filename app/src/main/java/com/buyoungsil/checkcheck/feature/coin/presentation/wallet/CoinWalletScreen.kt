@@ -4,16 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -21,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.buyoungsil.checkcheck.feature.coin.domain.model.CoinTransaction
-import com.buyoungsil.checkcheck.feature.coin.domain.model.TransactionType
 import com.buyoungsil.checkcheck.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -163,15 +160,16 @@ fun CoinWalletScreen(
         }
     }
 
-    // 선물하기 다이얼로그
+    // 🆕 선물하기 다이얼로그 (수정된 부분)
     if (showGiftDialog) {
         GiftCoinDialog(
-            members = uiState.groupMembers,
+            members = uiState.membersWithGroups, // 🆕 변경: groupMembers -> membersWithGroups
             currentUserId = viewModel.currentUserId,
             currentBalance = uiState.wallet?.totalCoins ?: 0,
             onDismiss = { showGiftDialog = false },
             onGift = { toUserId, amount, message ->
                 viewModel.giftCoins(toUserId, amount, message)
+                showGiftDialog = false
             }
         )
     }
@@ -306,90 +304,61 @@ private fun TransactionItem(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 아이콘
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(
-                        when {
-                            isReceived -> OrangePrimary.copy(alpha = 0.15f)
-                            else -> TextSecondaryLight.copy(alpha = 0.1f)
-                        }
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = transaction.type.icon,
-                    fontSize = 24.sp
-                )
-            }
-
-            // 내용
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // 거래 타입 표시
                 Text(
-                    text = transaction.type.displayName,
+                    text = when {
+                        isSystem -> "🏆 시스템 보상"
+                        isReceived -> "📥 받은 선물"
+                        else -> "📤 보낸 선물"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryLight
                 )
 
-                Text(
-                    text = when {
-                        isSystem -> "시스템"
-                        isReceived -> "from ${transaction.fromUserName}"
-                        else -> "to ${transaction.toUserName}"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondaryLight
-                )
-
-                transaction.message?.let { message ->
+                // 메시지 또는 설명
+                if (transaction.message != null) {
                     Text(
-                        text = message,
+                        text = transaction.message,
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondaryLight,
-                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                        color = TextSecondaryLight
                     )
                 }
 
+                // 시간
                 Text(
                     text = formatTimestamp(transaction.timestamp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextTertiaryLight
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondaryLight
                 )
             }
 
-            // 금액
+            // 코인 수량
             Text(
-                text = if (isReceived) "+${transaction.amount}" else "-${transaction.amount}",
+                text = "${if (isReceived) "+" else "-"}${transaction.amount}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (isReceived) SuccessOrange else TextSecondaryLight
-            )
-            Text(
-                text = "💰",
-                fontSize = 20.sp
+                color = if (isReceived) OrangePrimary else TextSecondaryLight
             )
         }
     }
 }
 
 /**
- * 빈 거래 내역 카드
+ * 거래 내역이 없을 때
  */
 @Composable
 private fun EmptyTransactionsCard() {
@@ -397,9 +366,8 @@ private fun EmptyTransactionsCard() {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            containerColor = OrangeSurfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier
@@ -409,7 +377,7 @@ private fun EmptyTransactionsCard() {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "📝",
+                text = "💭",
                 fontSize = 48.sp
             )
             Text(
@@ -422,20 +390,10 @@ private fun EmptyTransactionsCard() {
 }
 
 /**
- * 타임스탬프 포맷
+ * 타임스탬프 포맷팅
  */
 private fun formatTimestamp(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
-
-    return when {
-        diff < 60000 -> "방금 전"
-        diff < 3600000 -> "${diff / 60000}분 전"
-        diff < 86400000 -> "${diff / 3600000}시간 전"
-        diff < 604800000 -> "${diff / 86400000}일 전"
-        else -> {
-            val sdf = SimpleDateFormat("M월 d일", Locale.KOREAN)
-            sdf.format(Date(timestamp))
-        }
-    }
+    val sdf = SimpleDateFormat("MM월 dd일 HH:mm", Locale.KOREAN)
+    return sdf.format(Date(timestamp))
 }
+

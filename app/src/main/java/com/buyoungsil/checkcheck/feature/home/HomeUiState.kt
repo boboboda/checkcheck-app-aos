@@ -7,10 +7,11 @@ import com.buyoungsil.checkcheck.feature.task.domain.model.Task
 data class HomeUiState(
     val habits: List<HabitWithStats> = emptyList(),
     val groups: List<Group> = emptyList(),
-    val urgentTasks: List<Task> = emptyList(),  // ✅ 추가
-    val personalTasks: List<Task> = emptyList(),  // ✅ 추가
+    val urgentTasks: List<Task> = emptyList(),
+    val personalTasks: List<Task> = emptyList(),
     val todayCompletedCount: Int = 0,
     val todayTotalCount: Int = 0,
+    val totalCoins: Int = 0,  // ✅ 추가
     val isLoading: Boolean = true,
     val error: String? = null
 )

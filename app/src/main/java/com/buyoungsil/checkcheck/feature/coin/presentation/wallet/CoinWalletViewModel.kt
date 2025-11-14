@@ -74,6 +74,7 @@ class CoinWalletViewModel @Inject constructor(
         }
     }
 
+    // 🆕 수정된 loadGroupMembers() 함수
     private fun loadGroupMembers() {
         viewModelScope.launch {
             try {
@@ -81,22 +82,33 @@ class CoinWalletViewModel @Inject constructor(
                 getMyGroupsUseCase(currentUserId).collect { groups ->
                     Log.d(TAG, "내 그룹 수: ${groups.size}")
 
-                    // 모든 그룹의 멤버를 합쳐서 중복 제거
-                    val allMembers = mutableSetOf<String>() // userId를 Set으로 중복 관리
-                    val memberList = mutableListOf<com.buyoungsil.checkcheck.feature.group.domain.model.GroupMember>()
+                    val membersWithGroups = mutableListOf<MemberWithGroup>()
+                    val seenUserIds = mutableSetOf<String>() // 중복 체크
 
                     // 각 그룹의 멤버를 순차적으로 조회
                     groups.forEach { group ->
                         launch {
                             getGroupMembersUseCase(group.id).collect { members ->
                                 Log.d(TAG, "그룹 ${group.name} 멤버 수: ${members.size}")
+
                                 members.forEach { member ->
                                     // 중복 제거 (userId 기준)
-                                    if (allMembers.add(member.userId)) {
-                                        memberList.add(member)
+                                    if (seenUserIds.add(member.userId)) {
+                                        membersWithGroups.add(
+                                            MemberWithGroup(
+                                                userId = member.userId,
+                                                displayName = member.displayName,
+                                                role = member.role,
+                                                groupId = group.id,
+                                                groupName = group.name // ✅ 그룹 이름 추가
+                                            )
+                                        )
                                     }
                                 }
-                                _uiState.update { it.copy(groupMembers = memberList.toList()) }
+
+                                _uiState.update {
+                                    it.copy(membersWithGroups = membersWithGroups.toList())
+                                }
                             }
                         }
                     }

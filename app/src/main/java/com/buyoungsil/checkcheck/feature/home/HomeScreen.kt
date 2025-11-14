@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.buyoungsil.checkcheck.BuildConfig
 import com.buyoungsil.checkcheck.core.ui.components.*
 import com.buyoungsil.checkcheck.feature.group.domain.model.Group
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
@@ -50,7 +51,8 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToHabitList: () -> Unit,  // ✅ 추가
     onNavigateToPersonalTaskCreate: () -> Unit,
-    onNavigateToCoinWallet: () -> Unit  // ✅ 코인 지갑 추가
+    onNavigateToCoinWallet: () -> Unit,  // ✅ 코인 지갑 추가
+    onNavigateToDebug:() -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
@@ -73,18 +75,32 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    // 코인 지갑 버튼
-                    IconButton(onClick = onNavigateToCoinWallet) {
+                    // ✅ 코인 표시 버튼 (클릭 시 지갑으로 이동)
+                    Surface(
+                        modifier = Modifier
+                            .clickable { onNavigateToCoinWallet() }
+                            .padding(end = 8.dp),
+                        color = Color.White.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
                         Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
                                 text = "💰",
-                                fontSize = 20.sp
+                                fontSize = 18.sp
+                            )
+                            Text(
+                                text = "${uiState.totalCoins}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
                             )
                         }
                     }
+
                     // 설정 버튼
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
@@ -396,6 +412,22 @@ fun HomeScreen(
                                     group = group,
                                     onClick = { onNavigateToGroupDetail(group.id) }
                                 )
+                            }
+                        }
+
+
+                        item {
+                            if (BuildConfig.DEBUG) {
+                                Button(
+                                    onClick = {
+                                        onNavigateToDebug()
+                                        },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.Red
+                                    )
+                                ) {
+                                    Text("🧪 디버그 테스트")
+                                }
                             }
                         }
                     }

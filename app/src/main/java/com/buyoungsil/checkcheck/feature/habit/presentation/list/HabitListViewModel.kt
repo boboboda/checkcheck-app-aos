@@ -14,6 +14,7 @@ import javax.inject.Inject
 /**
  * 습관 목록 ViewModel
  * ✅ 로딩 상태 개선 - 첫 번째 빈 emit 무시
+ * ✅ 마일스톤 체크 추가
  */
 @HiltViewModel
 class HabitListViewModel @Inject constructor(
@@ -21,6 +22,7 @@ class HabitListViewModel @Inject constructor(
     private val toggleHabitCheckUseCase: ToggleHabitCheckUseCase,
     private val getHabitStatisticsUseCase: GetHabitStatisticsUseCase,
     private val deleteHabitUseCase: DeleteHabitUseCase,
+    private val checkHabitMilestoneUseCase: CheckHabitMilestoneUseCase, // 🆕 추가
     private val authManager: FirebaseAuthManager
 ) : ViewModel() {
 
@@ -100,12 +102,58 @@ class HabitListViewModel @Inject constructor(
     fun onHabitCheck(habitId: String) {
         viewModelScope.launch {
             Log.d(TAG, "습관 체크 토글: $habitId")
+
+            // 1. 습관 체크 토글
             toggleHabitCheckUseCase(
                 habitId = habitId,
                 userId = currentUserId,
                 date = LocalDate.now()
             )
+
+            // 2. 잠시 대기 (Firestore 업데이트 반영)
+            kotlinx.coroutines.delay(500)
+
+            // 3. 최신 통계 조회 (체크 후 streak 확인)
+            val stats = getHabitStatisticsUseCase(habitId).getOrNull()
+            if (stats != null && stats.currentStreak > 0) {
+                Log.d(TAG, "체크 후 currentStreak: ${stats.currentStreak}")
+
+                // 4. 습관 정보 조회 (제목 가져오기)
+                val habits = _uiState.value.habits
+                val habitWithStats = habits.find { it.habit.id == habitId }
+
+                // 5. 마일스톤 체크 및 코인 지급
+                val result = checkHabitMilestoneUseCase(
+                    habitId = habitId,
+                    userId = currentUserId,
+                    currentStreak = stats.currentStreak
+                )
+
+                result.onSuccess { coinsAwarded ->
+                    if (coinsAwarded != null && habitWithStats != null) {
+                        Log.d(TAG, "🎉 마일스톤 달성! ${coinsAwarded}코인 획득")
+
+                        // 🆕 UI에 마일스톤 메시지 표시
+                        _uiState.update {
+                            it.copy(
+                                milestoneMessage = MilestoneMessage(
+                                    habitTitle = habitWithStats.habit.title,
+                                    streakDays = stats.currentStreak,
+                                    coinsAwarded = coinsAwarded
+                                )
+                            )
+                        }
+                    }
+                }.onFailure { error ->
+                    Log.e(TAG, "마일스톤 체크 실패", error)
+                }
+            }
         }
+    }
+
+    // 🆕 마일스톤 메시지 제거
+    fun clearMilestoneMessage() {
+        _uiState.update { it.copy(milestoneMessage = null) }
     }
 
     fun onDeleteHabit(habitId: String) {

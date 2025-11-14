@@ -26,6 +26,7 @@ import com.buyoungsil.checkcheck.ui.theme.*
  * 🧡 습관 목록 화면
  * ✨ SwipeToDismissBox로 스와이프 삭제 구현
  * ✅ 로딩 처리 개선 (로딩 → 데이터 없음/리스트)
+ * ✅ 마일스톤 달성 메시지 표시 추가
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +37,18 @@ fun HabitListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() } // 🆕 추가
+
+    // 🆕 마일스톤 메시지 표시
+    LaunchedEffect(uiState.milestoneMessage) {
+        uiState.milestoneMessage?.let { message ->
+            snackbarHostState.showSnackbar(
+                message = "🎉 ${message.habitTitle} ${message.streakDays}일 연속 달성! ${message.coinsAwarded}코인 획득!",
+                duration = SnackbarDuration.Long
+            )
+            viewModel.clearMilestoneMessage()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -73,6 +86,7 @@ fun HabitListScreen(
                 )
             }
         },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, // 🆕 추가
         containerColor = OrangeBackground
     ) { padding ->
         Box(
