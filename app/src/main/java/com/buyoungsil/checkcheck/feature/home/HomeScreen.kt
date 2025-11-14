@@ -49,7 +49,8 @@ fun HomeScreen(
     onNavigateToGroupDetail: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToHabitList: () -> Unit,  // ✅ 추가
-    onNavigateToPersonalTaskCreate: () -> Unit
+    onNavigateToPersonalTaskCreate: () -> Unit,
+    onNavigateToCoinWallet: () -> Unit  // ✅ 코인 지갑 추가
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
@@ -72,6 +73,19 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    // 코인 지갑 버튼
+                    IconButton(onClick = onNavigateToCoinWallet) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "💰",
+                                fontSize = 20.sp
+                            )
+                        }
+                    }
+                    // 설정 버튼
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
                             Icons.Default.Settings,

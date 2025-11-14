@@ -7,6 +7,8 @@ import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.coin.domain.usecase.GetCoinTransactionsUseCase
 import com.buyoungsil.checkcheck.feature.coin.domain.usecase.GetCoinWalletUseCase
 import com.buyoungsil.checkcheck.feature.coin.domain.usecase.GiftCoinsUseCase
+import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetGroupMembersUseCase
+import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetMyGroupsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +22,8 @@ class CoinWalletViewModel @Inject constructor(
     private val getCoinWalletUseCase: GetCoinWalletUseCase,
     private val getCoinTransactionsUseCase: GetCoinTransactionsUseCase,
     private val giftCoinsUseCase: GiftCoinsUseCase,
+    private val getMyGroupsUseCase: GetMyGroupsUseCase,
+    private val getGroupMembersUseCase: GetGroupMembersUseCase,
     private val authManager: FirebaseAuthManager
 ) : ViewModel() {
 
@@ -35,6 +39,7 @@ class CoinWalletViewModel @Inject constructor(
 
     init {
         loadWalletData()
+        loadGroupMembers()
     }
 
     private fun loadWalletData() {
@@ -65,6 +70,39 @@ class CoinWalletViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "거래 내역 로드 실패", e)
+            }
+        }
+    }
+
+    private fun loadGroupMembers() {
+        viewModelScope.launch {
+            try {
+                // 내가 속한 그룹들 조회
+                getMyGroupsUseCase(currentUserId).collect { groups ->
+                    Log.d(TAG, "내 그룹 수: ${groups.size}")
+
+                    // 모든 그룹의 멤버를 합쳐서 중복 제거
+                    val allMembers = mutableSetOf<String>() // userId를 Set으로 중복 관리
+                    val memberList = mutableListOf<com.buyoungsil.checkcheck.feature.group.domain.model.GroupMember>()
+
+                    // 각 그룹의 멤버를 순차적으로 조회
+                    groups.forEach { group ->
+                        launch {
+                            getGroupMembersUseCase(group.id).collect { members ->
+                                Log.d(TAG, "그룹 ${group.name} 멤버 수: ${members.size}")
+                                members.forEach { member ->
+                                    // 중복 제거 (userId 기준)
+                                    if (allMembers.add(member.userId)) {
+                                        memberList.add(member)
+                                    }
+                                }
+                                _uiState.update { it.copy(groupMembers = memberList.toList()) }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "그룹 멤버 로드 실패", e)
             }
         }
     }

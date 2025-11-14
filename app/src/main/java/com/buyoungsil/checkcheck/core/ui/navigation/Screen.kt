@@ -38,4 +38,7 @@ sealed class Screen(val route: String) {
     // Settings (✨ 추가)
     object Settings : Screen("settings")
     object LinkAccount : Screen("link_account")
+
+    // Coin
+    object CoinWallet : Screen("coin_wallet")
 }

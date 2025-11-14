@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.buyoungsil.checkcheck.feature.auth.presentation.link.LinkAccountScreen
+import com.buyoungsil.checkcheck.feature.coin.presentation.wallet.CoinWalletScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.create.CreateGroupScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.detail.GroupDetailScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.join.JoinGroupScreen
@@ -51,6 +52,9 @@ fun NavGraph(
                 },
                 onNavigateToPersonalTaskCreate = {  // ✅ 추가
                     navController.navigate(Screen.PersonalTaskCreate.route)
+                },
+                onNavigateToCoinWallet = {  // ✅ 코인 지갑 추가
+                    navController.navigate(Screen.CoinWallet.route)
                 }
             )
         }
@@ -196,6 +200,15 @@ fun NavGraph(
 
         composable(Screen.PersonalTaskCreate.route) {
             CreateTaskScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // ========== 코인 지갑 ==========
+        composable(Screen.CoinWallet.route) {
+            CoinWalletScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
