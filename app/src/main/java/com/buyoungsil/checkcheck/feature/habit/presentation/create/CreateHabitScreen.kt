@@ -233,13 +233,14 @@ fun CreateHabitScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = ComponentShapes.HabitCard,
-                    colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // 헤더
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -253,7 +254,7 @@ fun CreateHabitScreen(
                                     color = TextPrimaryLight
                                 )
                                 Text(
-                                    text = "그룹 멤버들과 공유합니다",
+                                    text = "그룹원들이 내 습관을 볼 수 있어요",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextSecondaryLight
                                 )
@@ -261,89 +262,35 @@ fun CreateHabitScreen(
 
                             Switch(
                                 checked = uiState.groupShared,
-                                onCheckedChange = { viewModel.onGroupSharedToggle(it) },
+                                onCheckedChange = { viewModel.onGroupSharedToggle(it) },  // ✅ 수정
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = androidx.compose.ui.graphics.Color.White,
-                                    checkedTrackColor = OrangePrimary
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = OrangePrimary,
+                                    uncheckedThumbColor = Color.White,
+                                    uncheckedTrackColor = Color(0xFFE0E0E0)
                                 )
                             )
                         }
 
-
-// ✨ 그룹 챌린지 토글 (그룹 공유가 켜져있을 때만 표시)
+                        // 그룹 선택 (groupShared가 true일 때만)
                         if (uiState.groupShared) {
-                            HorizontalDivider(color = DividerLight)
+                            Divider(color = DividerLight)
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = "그룹 챌린지",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = TextPrimaryLight
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = "✨ NEW",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White,
-                                            modifier = Modifier
-                                                .background(OrangePrimary, RoundedCornerShape(4.dp))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = if (uiState.isGroupChallenge) {
-                                            "모든 멤버가 함께 체크하는 공동 챌린지"
-                                        } else {
-                                            "개인 습관을 그룹에 공개"
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondaryLight
-                                    )
-                                }
-                                Switch(
-                                    checked = uiState.isGroupChallenge,
-                                    onCheckedChange = { viewModel.onGroupChallengeToggle(it) },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = OrangePrimary
-                                    )
+                                Text(
+                                    text = "공유할 그룹 선택",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextPrimaryLight
                                 )
-                            }
-                        }
 
-                        // 그룹 선택
-                        if (uiState.groupShared) {
-                            HorizontalDivider(color = DividerLight)
-
-                            Text(
-                                text = "공유할 그룹",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimaryLight
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
                                 uiState.availableGroups.forEach { group ->
-                                    FilterChip(
-                                        selected = uiState.selectedGroup?.id == group.id,
-                                        onClick = { viewModel.onGroupSelect(group) },
-                                        label = { Text(group.name) },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = getGroupTypeColor(group.type.name.lowercase()).copy(alpha = 0.15f),
-                                            selectedLabelColor = getGroupTypeColor(group.type.name.lowercase())
-                                        )
+                                    GroupSelectItem(
+                                        group = group,
+                                        isSelected = uiState.selectedGroup?.id == group.id,
+                                        onClick = { viewModel.onGroupSelect(group) }
                                     )
                                 }
                             }
@@ -490,4 +437,70 @@ private fun IconPickerDialog(
         },
         shape = ComponentShapes.Dialog
     )
+}
+
+/**
+ * 그룹 선택 아이템
+ */
+@Composable
+private fun GroupSelectItem(
+    group: com.buyoungsil.checkcheck.feature.group.domain.model.Group,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = ComponentShapes.GroupCard,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) OrangeSurfaceVariant else Color(0xFFF5F5F5)
+        ),
+        border = if (isSelected) {
+            androidx.compose.foundation.BorderStroke(2.dp, OrangePrimary)
+        } else null,
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isSelected) 2.dp else 0.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = group.icon,
+                    fontSize = 24.sp
+                )
+                Column {
+                    Text(
+                        text = group.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimaryLight
+                    )
+                    Text(
+                        text = "${group.memberIds.size}명",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondaryLight
+                    )
+                }
+            }
+
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "선택됨",
+                    tint = OrangePrimary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    }
 }

@@ -468,4 +468,71 @@ class HabitFirestoreRepository @Inject constructor(
 
         return maxStreak
     }
+
+    // ==================== 🆕 그룹 공유 습관 조회 ====================
+
+    /**
+     * 그룹에 공유된 모든 습관 조회
+     */
+    override fun getSharedHabitsInGroup(groupId: String): Flow<List<Habit>> = callbackFlow {
+        Log.d(TAG, "=== getSharedHabitsInGroup Flow 시작 ===")
+        Log.d(TAG, "groupId: $groupId")
+
+        val listener = habitsCollection
+            .whereEqualTo("groupId", groupId)
+            .whereEqualTo("groupShared", true)
+            .whereEqualTo("active", true)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e(TAG, "❌ getSharedHabitsInGroup 에러", error)
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                val habits = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(HabitFirestoreDto::class.java)?.toDomain()
+                } ?: emptyList()
+
+                Log.d(TAG, "✅ getSharedHabitsInGroup 데이터 수신: ${habits.size}개")
+                trySend(habits)
+            }
+
+        awaitClose {
+            Log.d(TAG, "getSharedHabitsInGroup Flow 종료")
+            listener.remove()
+        }
+    }
+
+    /**
+     * 특정 사용자가 특정 그룹에 공유한 습관 조회
+     */
+    override fun getSharedHabitsByUser(userId: String, groupId: String): Flow<List<Habit>> = callbackFlow {
+        Log.d(TAG, "=== getSharedHabitsByUser Flow 시작 ===")
+        Log.d(TAG, "userId: $userId, groupId: $groupId")
+
+        val listener = habitsCollection
+            .whereEqualTo("userId", userId)
+            .whereEqualTo("groupId", groupId)
+            .whereEqualTo("groupShared", true)
+            .whereEqualTo("active", true)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e(TAG, "❌ getSharedHabitsByUser 에러", error)
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                val habits = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(HabitFirestoreDto::class.java)?.toDomain()
+                } ?: emptyList()
+
+                Log.d(TAG, "✅ getSharedHabitsByUser 데이터 수신: ${habits.size}개")
+                trySend(habits)
+            }
+
+        awaitClose {
+            Log.d(TAG, "getSharedHabitsByUser Flow 종료")
+            listener.remove()
+        }
+    }
 }

@@ -11,6 +11,7 @@ import com.buyoungsil.checkcheck.feature.group.domain.usecase.LeaveGroupUseCase
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.UpdateGroupMemberNicknameUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetGroupHabitsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetHabitStatisticsUseCase
+import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetSharedHabitsInGroupUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.ToggleHabitCheckUseCase
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
 import com.buyoungsil.checkcheck.feature.task.domain.usecase.ApproveTaskUseCase
@@ -37,7 +38,8 @@ class GroupDetailViewModel @Inject constructor(
     private val approveTaskUseCase: ApproveTaskUseCase,
     private val updateGroupMemberNicknameUseCase: UpdateGroupMemberNicknameUseCase,
     savedStateHandle: SavedStateHandle,
-    private val authManager: FirebaseAuthManager
+    private val authManager: FirebaseAuthManager,
+    private val getSharedHabitsInGroupUseCase: GetSharedHabitsInGroupUseCase,
 ) : ViewModel() {
 
     companion object {
@@ -62,7 +64,7 @@ class GroupDetailViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isLoading = true,
-                    currentUserId = currentUserId  // ✅ userId 설정
+                    currentUserId = currentUserId
                 )
             }
 
@@ -81,12 +83,13 @@ class GroupDetailViewModel @Inject constructor(
                     return@launch
                 }
 
-                // ✅ 그룹 습관, 할일, 멤버 동시에 가져오기
+                // ✅ 그룹 습관, 할일, 멤버, 공유 습관 동시에 가져오기
                 combine(
                     getGroupHabitsUseCase(groupId),
                     getGroupTasksUseCase(groupId),
-                    getGroupMembersUseCase(groupId)  // ✅ 추가
-                ) { habits, tasks, members ->
+                    getGroupMembersUseCase(groupId),
+                    getSharedHabitsInGroupUseCase(groupId)  // 🆕 추가
+                ) { habits, tasks, members, sharedHabits ->  // 🆕 sharedHabits 추가
 
                     // 습관에 통계 추가
                     val habitsWithStats = habits.map { habit ->
@@ -100,16 +103,32 @@ class GroupDetailViewModel @Inject constructor(
                         )
                     }
 
+                    // 🆕 공유 습관에도 통계 추가
+                    val sharedHabitsWithStats = sharedHabits.map { habit ->
+                        val stats = getHabitStatisticsUseCase(habit.id).getOrNull()
+                        val isCheckedToday = stats?.currentStreak ?: 0 >= 1
+
+                        HabitWithStats(
+                            habit = habit,
+                            statistics = stats,
+                            isCheckedToday = isCheckedToday
+                        )
+                    }
+
+                    // 🆕 멤버별로 그룹화
+                    val habitsByMember = sharedHabitsWithStats.groupBy { it.habit.userId }
+
                     val completedCount = habitsWithStats.count { it.isCheckedToday }
                     val totalCount = habitsWithStats.size
 
-                    // ✅ 내 닉네임 찾기
+                    // 내 닉네임 찾기
                     val myMember = members.find { it.userId == currentUserId }
                     val myNickname = myMember?.displayName
 
                     Log.d(TAG, "=== GroupMember 정보 ===")
                     Log.d(TAG, "전체 멤버 수: ${members.size}")
                     Log.d(TAG, "내 닉네임: $myNickname")
+                    Log.d(TAG, "공유 습관 수: ${sharedHabits.size}")  // 🆕 로그 추가
 
                     _uiState.update {
                         it.copy(
@@ -119,8 +138,10 @@ class GroupDetailViewModel @Inject constructor(
                             memberCount = group.memberIds.size,
                             todayCompletedCount = completedCount,
                             todayTotalCount = totalCount,
-                            myNickname = myNickname,  // ✅ 추가
+                            myNickname = myNickname,
                             currentUserId = currentUserId,
+                            sharedHabitsByMember = habitsByMember,  // 🆕 추가
+                            groupMembers = members,  // 🆕 추가
                             isLoading = false,
                             error = null
                         )

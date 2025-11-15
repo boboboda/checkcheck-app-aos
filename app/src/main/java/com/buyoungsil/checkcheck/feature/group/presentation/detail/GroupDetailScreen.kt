@@ -3,6 +3,7 @@ package com.buyoungsil.checkcheck.feature.group.presentation.detail
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -276,6 +277,31 @@ fun GroupDetailScreen(
                                     habitIcon = habitWithStats.habit.icon,
                                     onCheck = { viewModel.onHabitCheck(habitWithStats.habit.id) }
                                 )
+                            }
+                        }
+
+                        // 🆕 그룹원 습관 섹션
+                        if (uiState.sharedHabitsByMember.isNotEmpty()) {
+                            item {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                SectionHeader(
+                                    icon = "👥",
+                                    title = "그룹원 습관",
+                                    count = uiState.sharedHabitsByMember.values.sumOf { it.size }
+                                )
+                            }
+
+                            uiState.sharedHabitsByMember.forEach { (userId, habits) ->
+                                item {
+                                    val member = uiState.groupMembers.find { it.userId == userId }
+                                    val memberName = member?.displayName ?: "알 수 없음"
+
+                                    MemberHabitSection(
+                                        memberName = memberName,
+                                        habits = habits,
+                                        onHabitClick = { /* TODO: 습관 상세 화면 */ }
+                                    )
+                                }
                             }
                         }
 
@@ -838,6 +864,158 @@ private fun EmptyCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondaryLight
             )
+        }
+    }
+}
+
+/**
+ * 🆕 멤버별 습관 섹션
+ */
+@Composable
+private fun MemberHabitSection(
+    memberName: String,
+    habits: List<com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats>,
+    onHabitClick: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = ComponentShapes.GroupCard,
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(OrangeSurfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = memberName.take(1),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = OrangePrimary
+                        )
+                    }
+                    Text(
+                        text = memberName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryLight
+                    )
+                }
+                Text(
+                    text = "${habits.size}개",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondaryLight
+                )
+            }
+
+            Divider(color = DividerLight, thickness = 1.dp)
+
+            habits.forEach { habitWithStats ->
+                MemberHabitItem(
+                    habitWithStats = habitWithStats,
+                    onClick = { onHabitClick(habitWithStats.habit.id) }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 🆕 멤버 습관 아이템
+ */
+@Composable
+private fun MemberHabitItem(
+    habitWithStats: com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = ComponentShapes.GroupCard,
+        colors = CardDefaults.cardColors(
+            containerColor = if (habitWithStats.isCheckedToday) {
+                OrangeSurfaceVariant
+            } else {
+                OrangeBackground
+            }
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 1.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = if (habitWithStats.isCheckedToday) {
+                        Icons.Default.CheckCircle
+                    } else {
+                        Icons.Default.RadioButtonUnchecked
+                    },
+                    contentDescription = null,
+                    tint = if (habitWithStats.isCheckedToday) {
+                        OrangePrimary
+                    } else {
+                        TextSecondaryLight
+                    },
+                    modifier = Modifier.size(24.dp)
+                )
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = habitWithStats.habit.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimaryLight
+                    )
+                    Text(
+                        text = "🔥 ${habitWithStats.statistics?.currentStreak ?: 0}일 연속",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondaryLight
+                    )
+                }
+            }
+
+            habitWithStats.statistics?.let { stats ->
+                Text(
+                    text = "${stats.completionRate}%",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = OrangePrimary
+                )
+            }
         }
     }
 }

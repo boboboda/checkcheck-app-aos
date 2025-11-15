@@ -36,4 +36,15 @@ interface HabitRepository {
     // Statistics
     suspend fun getHabitStatistics(habitId: String): HabitStatistics
     suspend fun getCurrentStreak(habitId: String): Int
+
+
+    /**
+     * 그룹에 공유된 습관 목록 조회
+     */
+    fun getSharedHabitsInGroup(groupId: String): Flow<List<Habit>>
+
+    /**
+     * 특정 사용자가 그룹에 공유한 습관 목록 조회
+     */
+    fun getSharedHabitsByUser(userId: String, groupId: String): Flow<List<Habit>>
 }
