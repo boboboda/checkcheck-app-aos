@@ -1,7 +1,9 @@
 package com.buyoungsil.checkcheck.core.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -17,6 +19,7 @@ import com.buyoungsil.checkcheck.feature.group.presentation.join.JoinGroupScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.list.GroupListScreen
 import com.buyoungsil.checkcheck.feature.habit.presentation.create.CreateHabitScreen
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitListScreen
+import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitListViewModel
 import com.buyoungsil.checkcheck.feature.home.HomeScreen
 import com.buyoungsil.checkcheck.feature.settings.presentation.SettingsScreen
 import com.buyoungsil.checkcheck.feature.statistics.presentation.StatisticsScreen
@@ -35,13 +38,19 @@ fun NavGraph(
         modifier = modifier
     ) {
         // ========== 홈 화면 ==========
-        composable(Screen.Home.route) {
+        composable(Screen.Home.route) { backStackEntry ->
+            // ✅ NavGraph 레벨에서 ViewModel 가져오기
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(navController.graph.startDestinationRoute!!)
+            }
+            val habitViewModel: HabitListViewModel = hiltViewModel(parentEntry)
+
             HomeScreen(
+                habitViewModel = habitViewModel,  // ✅ 공유된 ViewModel 전달
                 onNavigateToHabitCreate = {
                     navController.navigate(Screen.HabitCreate.createRoute())
                 },
                 onNavigateToGroupList = {
-                    // ✅ 하단 탭바처럼 popUpTo 추가
                     navController.navigate(Screen.GroupList.route) {
                         popUpTo(navController.graph.startDestinationId) {
                             saveState = true
@@ -62,7 +71,7 @@ fun NavGraph(
                 onNavigateToPersonalTaskCreate = {
                     navController.navigate(Screen.PersonalTaskCreate.route)
                 },
-                onNavigateToPersonalTaskList = {  // ✅ 수정: PersonalTaskList로 이동
+                onNavigateToPersonalTaskList = {
                     navController.navigate(Screen.PersonalTaskList.route)
                 },
                 onNavigateToCoinWallet = {
@@ -75,8 +84,15 @@ fun NavGraph(
         }
 
         // ========== Habit 화면들 ==========
-        composable(Screen.HabitList.route) {
+        composable(Screen.HabitList.route) { backStackEntry ->
+            // ✅ NavGraph 레벨에서 ViewModel 가져오기
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(navController.graph.startDestinationRoute!!)
+            }
+            val habitViewModel: HabitListViewModel = hiltViewModel(parentEntry)
+
             HabitListScreen(
+                viewModel = habitViewModel,  // ✅ 공유된 ViewModel 전달
                 onNavigateToCreate = {
                     navController.navigate(Screen.HabitCreate.createRoute())
                 },

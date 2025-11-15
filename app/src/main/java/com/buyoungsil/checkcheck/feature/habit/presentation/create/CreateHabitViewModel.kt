@@ -140,10 +140,21 @@ class CreateHabitViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     android.util.Log.e("CreateHabitVM", "❌ 습관 생성 실패: ${error.message}")
+
+                    // ✅ 제한 관련 에러는 사용자 친화적 메시지로 변환
+                    val userFriendlyMessage = when {
+                        error.message?.contains("최대 10개") == true ->
+                            "습관은 최대 10개까지만 만들 수 있어요 😢"
+                        error.message?.contains("동시에 5개") == true ->
+                            "동시에 진행할 수 있는 습관은 최대 5개예요 💪"
+                        else ->
+                            error.message ?: "습관 생성에 실패했어요"
+                    }
+
                     _uiState.update {
                         it.copy(
                             loading = false,
-                            error = error.message ?: "습관 생성 실패"
+                            error = userFriendlyMessage
                         )
                     }
                 }

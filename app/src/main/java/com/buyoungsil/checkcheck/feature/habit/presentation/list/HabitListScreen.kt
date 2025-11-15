@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -31,7 +32,7 @@ import com.buyoungsil.checkcheck.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HabitListScreen(
-    viewModel: HabitListViewModel = hiltViewModel(),
+    viewModel: HabitListViewModel,
     onNavigateToCreate: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
@@ -79,11 +80,35 @@ fun HabitListScreen(
         floatingActionButton = {
             // ✅ 로딩 중이 아닐 때만 FAB 표시
             if (!uiState.loading) {
-                OrangeFAB(
-                    onClick = onNavigateToCreate,
-                    icon = Icons.Default.Add,
-                    contentDescription = "습관 추가"
-                )
+                // ✅ 습관 제한 정보 표시
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // 제한 정보 카드
+                    if (uiState.habits.isNotEmpty()) {
+                        Card(
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.White.copy(alpha = 0.95f)
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        ) {
+                            Text(
+                                text = viewModel.getHabitLimitInfo(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondaryLight,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+
+                    // FAB
+                    OrangeFAB(
+                        onClick = onNavigateToCreate,
+                        icon = Icons.Default.Add
+                    )
+                }
             }
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, // 🆕 추가

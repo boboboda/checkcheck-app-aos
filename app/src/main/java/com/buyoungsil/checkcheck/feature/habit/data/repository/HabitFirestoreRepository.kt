@@ -11,7 +11,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -22,7 +21,7 @@ import javax.inject.Inject
  * Firebase Firestore 기반 Habit Repository 구현
  * ✅ 달성률: 생성일부터 오늘까지 체크해야 할 날 대비 실제 체크한 날의 비율
  * ✅ 스트릭: 연속으로 체크한 일수
- * ✅ 빈 데이터에도 즉시 emit (무한 로딩 방지)
+ * ✅ 실시간 동기화 Flow 사용
  */
 class HabitFirestoreRepository @Inject constructor(
     private val firestore: FirebaseFirestore
@@ -40,9 +39,6 @@ class HabitFirestoreRepository @Inject constructor(
     override fun getAllHabits(userId: String): Flow<List<Habit>> = callbackFlow {
         Log.d(TAG, "getAllHabits Flow 시작 - userId: $userId")
 
-        // ✨ 즉시 빈 리스트 emit (무한 로딩 방지)
-        trySend(emptyList())
-
         val listener = habitsCollection
             .whereEqualTo("userId", userId)
             .whereEqualTo("active", true)
@@ -57,11 +53,14 @@ class HabitFirestoreRepository @Inject constructor(
                     doc.toObject(HabitFirestoreDto::class.java)?.toDomain()
                 } ?: emptyList()
 
-                Log.d(TAG, "getAllHabits 데이터 수신: ${habits.size}개")
+                Log.d(TAG, "✅ getAllHabits 데이터 수신: ${habits.size}개")
                 trySend(habits)
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            Log.d(TAG, "getAllHabits Flow 종료")
+            listener.remove()
+        }
     }
 
     override suspend fun getHabitById(habitId: String): Habit? {
@@ -76,9 +75,6 @@ class HabitFirestoreRepository @Inject constructor(
     override fun getPersonalHabits(userId: String): Flow<List<Habit>> = callbackFlow {
         Log.d(TAG, "=== getPersonalHabits Flow 시작 ===")
         Log.d(TAG, "userId: $userId")
-
-        // ✨ 즉시 빈 리스트 emit (무한 로딩 방지)
-        trySend(emptyList())
 
         val listener = habitsCollection
             .whereEqualTo("userId", userId)
@@ -108,9 +104,6 @@ class HabitFirestoreRepository @Inject constructor(
     override fun getGroupHabits(groupId: String): Flow<List<Habit>> = callbackFlow {
         Log.d(TAG, "getGroupHabits Flow 시작 - groupId: $groupId")
 
-        // ✨ 즉시 빈 리스트 emit (무한 로딩 방지)
-        trySend(emptyList())
-
         val listener = habitsCollection
             .whereEqualTo("groupId", groupId)
             .whereEqualTo("groupShared", true)
@@ -126,11 +119,14 @@ class HabitFirestoreRepository @Inject constructor(
                     doc.toObject(HabitFirestoreDto::class.java)?.toDomain()
                 } ?: emptyList()
 
-                Log.d(TAG, "getGroupHabits 데이터 수신: ${habits.size}개")
+                Log.d(TAG, "✅ getGroupHabits 데이터 수신: ${habits.size}개")
                 trySend(habits)
             }
 
-        awaitClose { listener.remove() }
+        awaitClose {
+            Log.d(TAG, "getGroupHabits Flow 종료")
+            listener.remove()
+        }
     }
 
     override suspend fun insertHabit(habit: Habit) {
@@ -179,9 +175,6 @@ class HabitFirestoreRepository @Inject constructor(
     override fun getChecksByHabit(habitId: String): Flow<List<HabitCheck>> = callbackFlow {
         Log.d(TAG, "=== getChecksByHabit Flow 시작 (habitId=$habitId) ===")
 
-        // ✨ 즉시 빈 리스트 emit (무한 로딩 방지)
-        trySend(emptyList())
-
         val listener = checksCollection
             .whereEqualTo("habitId", habitId)
             .addSnapshotListener { snapshot, error ->
@@ -224,10 +217,6 @@ class HabitFirestoreRepository @Inject constructor(
     override fun getChecksByUserAndDate(userId: String, date: LocalDate): Flow<List<HabitCheck>> = callbackFlow {
         Log.d(TAG, "=== getChecksByUserAndDate Flow 시작 (userId=$userId, date=$date) ===")
 
-        // ✨✨✨ 핵심! 즉시 빈 리스트 emit (무한 로딩 방지)
-        trySend(emptyList())
-        Log.d(TAG, "✅ 빈 리스트 즉시 emit 완료")
-
         val listener = checksCollection
             .whereEqualTo("userId", userId)
             .whereEqualTo("date", date.toString())
@@ -258,9 +247,6 @@ class HabitFirestoreRepository @Inject constructor(
         endDate: LocalDate
     ): Flow<List<HabitCheck>> = callbackFlow {
         Log.d(TAG, "=== getChecksByDateRange Flow 시작 ===")
-
-        // ✨ 즉시 빈 리스트 emit (무한 로딩 방지)
-        trySend(emptyList())
 
         val listener = checksCollection
             .whereEqualTo("habitId", habitId)
@@ -335,11 +321,27 @@ class HabitFirestoreRepository @Inject constructor(
         val habit = getHabitById(habitId)
             ?: return HabitStatistics(habitId = habitId)
 
-        val allChecks = getChecksByHabit(habitId).first()
+        // ✅ Flow 대신 직접 조회 (타이밍 이슈 해결)
+        val allChecks = try {
+            checksCollection
+                .whereEqualTo("habitId", habitId)
+                .get()
+                .await()
+                .documents
+                .mapNotNull { doc ->
+                    doc.toObject(HabitCheckFirestoreDto::class.java)?.toDomain()
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "체크 조회 실패", e)
+            emptyList()
+        }
+
         val completedChecks = allChecks.filter { it.completed }
 
         val totalChecks = completedChecks.size
-        val currentStreak = getCurrentStreak(habitId)
+
+        // ✅ 현재 스트릭 계산 (같은 데이터 사용)
+        val currentStreak = calculateCurrentStreak(completedChecks)
 
         // ✅ longestStreak 계산
         val longestStreak = calculateLongestStreak(completedChecks)
@@ -390,17 +392,49 @@ class HabitFirestoreRepository @Inject constructor(
     }
 
     override suspend fun getCurrentStreak(habitId: String): Int {
+        // ✅ 직접 조회로 변경
+        val allChecks = try {
+            checksCollection
+                .whereEqualTo("habitId", habitId)
+                .get()
+                .await()
+                .documents
+                .mapNotNull { doc ->
+                    doc.toObject(HabitCheckFirestoreDto::class.java)?.toDomain()
+                }
+        } catch (e: Exception) {
+            Log.e(TAG, "체크 조회 실패", e)
+            emptyList()
+        }
+
+        val completedChecks = allChecks.filter { it.completed }
+        return calculateCurrentStreak(completedChecks)
+    }
+
+    /**
+     * ✅ 현재 스트릭 계산 (체크 목록 기반)
+     * 오늘부터 역순으로 연속된 체크 일수를 계산
+     */
+    private fun calculateCurrentStreak(completedChecks: List<HabitCheck>): Int {
+        if (completedChecks.isEmpty()) return 0
+
         val today = LocalDate.now()
+        val sortedDates = completedChecks.map { it.date }.sortedDescending()
+
+        // 오늘 체크가 없으면 0
+        if (!sortedDates.contains(today)) return 0
+
         var streak = 0
         var currentDate = today
 
-        while (true) {
-            val check = getCheckByDate(habitId, currentDate)
-            if (check == null || !check.completed) {
+        for (date in sortedDates) {
+            if (date == currentDate) {
+                streak++
+                currentDate = currentDate.minusDays(1)
+            } else if (date < currentDate) {
+                // 연속이 끊김
                 break
             }
-            streak++
-            currentDate = currentDate.minusDays(1)
         }
 
         return streak

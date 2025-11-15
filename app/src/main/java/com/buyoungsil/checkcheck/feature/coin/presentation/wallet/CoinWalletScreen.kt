@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.buyoungsil.checkcheck.feature.coin.domain.model.CoinTransaction
+import com.buyoungsil.checkcheck.feature.coin.domain.model.HabitLimits
 import com.buyoungsil.checkcheck.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -125,6 +127,14 @@ fun CoinWalletScreen(
                                 familyCoins = uiState.wallet?.familyCoins ?: 0,
                                 rewardCoins = uiState.wallet?.rewardCoins ?: 0,
                                 totalCoins = uiState.wallet?.totalCoins ?: 0
+                            )
+                        }
+
+                        // ✅ 월간/일간 코인 제한 현황 카드
+                        item {
+                            CoinLimitStatusCard(
+                                monthlyCoins = uiState.wallet?.monthlyRewardCoins ?: 0,
+                                dailyCoins = uiState.wallet?.dailyRewardCoins ?: 0
                             )
                         }
 
@@ -397,3 +407,103 @@ private fun formatTimestamp(timestamp: Long): String {
     return sdf.format(Date(timestamp))
 }
 
+
+/**
+ * ✅ 코인 제한 현황 카드
+ */
+@Composable
+private fun CoinLimitStatusCard(
+    monthlyCoins: Int,
+    dailyCoins: Int
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = ComponentShapes.HabitCard,
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "📊 습관 보상 코인 현황",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimaryLight
+            )
+
+            // 월간 현황
+            LimitProgressBar(
+                label = "이번 달",
+                current = monthlyCoins,
+                max = HabitLimits.MAX_MONTHLY_HABIT_COINS,
+                color = OrangePrimary
+            )
+
+            // 일간 현황
+            LimitProgressBar(
+                label = "오늘",
+                current = dailyCoins,
+                max = HabitLimits.MAX_DAILY_HABIT_COINS,
+                color = OrangeSecondary
+            )
+
+            // 안내 문구
+            Text(
+                text = "💡 습관 마일스톤 달성으로 받을 수 있는 코인은 하루 ${HabitLimits.MAX_DAILY_HABIT_COINS}코인, 한 달 ${HabitLimits.MAX_MONTHLY_HABIT_COINS}코인까지예요.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondaryLight,
+                lineHeight = 18.sp
+            )
+        }
+    }
+}
+
+/**
+ * ✅ 제한 프로그레스 바
+ */
+@Composable
+private fun LimitProgressBar(
+    label: String,
+    current: Int,
+    max: Int,
+    color: Color
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextPrimaryLight,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "$current / $max 💰",
+                style = MaterialTheme.typography.bodyMedium,
+                color = color,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        LinearProgressIndicator(
+            progress = (current.toFloat() / max).coerceIn(0f, 1f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp)),
+            color = color,
+            trackColor = color.copy(alpha = 0.2f)
+        )
+    }
+}

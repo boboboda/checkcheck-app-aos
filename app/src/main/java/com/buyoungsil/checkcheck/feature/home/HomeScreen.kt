@@ -36,7 +36,7 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     homeViewModel: HomeViewModel = hiltViewModel(),
-    habitViewModel: HabitListViewModel = hiltViewModel(),
+    habitViewModel: HabitListViewModel,
     taskViewModel: TaskListViewModel = hiltViewModel(),
     onNavigateToHabitCreate: (String?) -> Unit,
     onNavigateToGroupList: () -> Unit,

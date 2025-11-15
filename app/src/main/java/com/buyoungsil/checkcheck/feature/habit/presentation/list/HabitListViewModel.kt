@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
+import com.buyoungsil.checkcheck.feature.coin.domain.model.HabitLimits
 import com.buyoungsil.checkcheck.feature.habit.domain.model.Habit
 import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitStatistics
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.*
@@ -27,6 +28,7 @@ class HabitListViewModel @Inject constructor(
     private val getHabitStatisticsUseCase: GetHabitStatisticsUseCase,
     private val deleteHabitUseCase: DeleteHabitUseCase,
     private val checkHabitMilestoneUseCase: CheckHabitMilestoneUseCase,
+    private val validateHabitLimitsUseCase: ValidateHabitLimitsUseCase,
     private val authManager: FirebaseAuthManager
 ) : ViewModel() {
 
@@ -62,7 +64,6 @@ class HabitListViewModel @Inject constructor(
                             )
                         }
                     }
-                    .drop(1)  // 첫 번째 빈 emit 무시
                     .collect { habits ->
                         Log.d(TAG, "✅ 습관 데이터 수신: ${habits.size}개")
 
@@ -130,84 +131,69 @@ class HabitListViewModel @Inject constructor(
 
             if (isAlreadyChecked) {
                 Log.d(TAG, "⚠️ 이미 체크 완료 - 동작 안 함")
-
-                // 🆕 이미 체크된 경우 메시지 표시
                 _uiState.update {
-                    it.copy(
-                        infoMessage = "이미 오늘의 습관을 완료했습니다!"
-                    )
+                    it.copy(infoMessage = "이미 오늘의 습관을 완료했습니다!")
                 }
                 return@launch
             }
 
-            // 2. 습관 체크
-            val checkResult = checkHabitUseCase(
-                habitId = habitId,
-                userId = currentUserId,
-                date = LocalDate.now()
-            )
-
-            checkResult.onSuccess { wasAdded ->
-                if (wasAdded) {
+            // 2. 체크 추가
+            checkHabitUseCase(habitId, currentUserId, LocalDate.now())
+                .onSuccess {
                     Log.d(TAG, "✅ 체크 추가 성공")
 
-                    // 3. 잠시 대기 (Firestore 업데이트 반영)
-                    kotlinx.coroutines.delay(500)
-
-                    // 4. 최신 통계 조회
+                    // 3. 체크 후 통계 다시 조회
                     val stats = getHabitStatisticsUseCase(habitId).getOrNull()
+                    Log.d(TAG, "체크 후 currentStreak: ${stats?.currentStreak}")
+
+                    // ✅ 4. UI 즉시 업데이트 - 여기 추가!
+                    val updatedHabits = _uiState.value.habits.map { habitWithStats ->
+                        if (habitWithStats.habit.id == habitId) {
+                            habitWithStats.copy(
+                                statistics = stats,
+                                isCheckedToday = true,
+                                nextMilestoneInfo = if (stats != null) {
+                                    NextMilestoneInfo.fromCurrentStreak(stats.currentStreak)
+                                } else {
+                                    habitWithStats.nextMilestoneInfo
+                                }
+                            )
+                        } else {
+                            habitWithStats
+                        }
+                    }
+
+                    _uiState.update { it.copy(habits = updatedHabits) }
+                    Log.d(TAG, "✅ UI 즉시 업데이트 완료")
+
+                    // 5. 마일스톤 체크
                     if (stats != null && stats.currentStreak > 0) {
-                        Log.d(TAG, "체크 후 currentStreak: ${stats.currentStreak}")
-
-                        // 5. 습관 정보 조회
-                        val habits = _uiState.value.habits
-                        val habitWithStats = habits.find { it.habit.id == habitId }
-
-                        // 6. 마일스톤 체크 및 코인 지급
-                        val milestoneResult = checkHabitMilestoneUseCase(
+                        val coinsAwarded = checkHabitMilestoneUseCase(
                             habitId = habitId,
                             userId = currentUserId,
                             currentStreak = stats.currentStreak
-                        )
+                        ).getOrNull()
 
-                        milestoneResult.onSuccess { coinsAwarded ->
-                            if (coinsAwarded != null && habitWithStats != null) {
-                                Log.d(TAG, "🎉 마일스톤 달성! ${coinsAwarded}코인 획득")
-
-                                // 마일스톤 메시지 표시
-                                _uiState.update {
-                                    it.copy(
-                                        milestoneMessage = MilestoneMessage(
-                                            habitTitle = habitWithStats.habit.title,
-                                            streakDays = stats.currentStreak,
-                                            coinsAwarded = coinsAwarded
-                                        )
+                        if (coinsAwarded != null && coinsAwarded > 0) {
+                            val habit = _uiState.value.habits.find { it.habit.id == habitId }
+                            _uiState.update {
+                                it.copy(
+                                    milestoneMessage = MilestoneMessage(
+                                        habitTitle = habit?.habit?.title ?: "",
+                                        streakDays = stats.currentStreak,
+                                        coinsAwarded = coinsAwarded
                                     )
-                                }
-                            }
-                        }.onFailure { error ->
-                            Log.e(TAG, "마일스톤 체크 실패", error)
-
-                            // 월간 제한 초과 에러 처리
-                            if (error.message?.contains("월간 코인 제한") == true) {
-                                _uiState.update {
-                                    it.copy(
-                                        error = "이번 달 코인 제한에 도달했습니다.\n" +
-                                                "다음 달에 다시 도전해주세요!"
-                                    )
-                                }
+                                )
                             }
                         }
                     }
                 }
-            }.onFailure { error ->
-                Log.e(TAG, "❌ 체크 실패", error)
-                _uiState.update {
-                    it.copy(
-                        error = error.message ?: "습관 체크에 실패했습니다"
-                    )
+                .onFailure { error ->
+                    Log.e(TAG, "❌ 체크 실패: ${error.message}")
+                    _uiState.update {
+                        it.copy(error = error.message ?: "습관 체크에 실패했습니다")
+                    }
                 }
-            }
         }
     }
 
@@ -233,6 +219,19 @@ class HabitListViewModel @Inject constructor(
             Log.d(TAG, "습관 삭제: $habitId")
             deleteHabitUseCase(habitId)
         }
+    }
+
+    /**
+     * ✅ 현재 습관 제한 정보 조회
+     */
+    fun getHabitLimitInfo(): String {
+        val currentHabits = _uiState.value.habits.size
+        val activeHabits = _uiState.value.habits.count {
+            (it.statistics?.currentStreak ?: 0) > 0
+        }
+
+        return "전체: $currentHabits/${HabitLimits.MAX_HABITS_PER_USER}개 | " +
+                "진행 중: $activeHabits/${HabitLimits.MAX_ACTIVE_HABITS}개"
     }
 
     /**

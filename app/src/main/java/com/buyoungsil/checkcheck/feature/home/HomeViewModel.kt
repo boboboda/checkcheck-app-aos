@@ -43,7 +43,6 @@ class HomeViewModel @Inject constructor(
 
             try {
                 getMyGroupsUseCase(currentUserId)
-                    .drop(1)  // 첫 빈 emit 무시
                     .catch { e ->
                         Log.e(TAG, "❌ 그룹 로딩 실패", e)
                     }
