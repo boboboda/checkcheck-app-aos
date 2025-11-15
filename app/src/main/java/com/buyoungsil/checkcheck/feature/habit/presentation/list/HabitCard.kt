@@ -20,8 +20,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.buyoungsil.checkcheck.core.constants.HabitLimits
 import com.buyoungsil.checkcheck.core.util.IconConverter
+import com.buyoungsil.checkcheck.feature.coin.domain.model.HabitLimits
+import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitMilestone
+import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitMilestones
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
@@ -340,7 +342,7 @@ data class NextMilestoneInfo(
 ) {
     companion object {
         fun fromCurrentStreak(currentStreak: Int): NextMilestoneInfo? {
-            val nextMilestone = HabitLimits.getNextMilestone(currentStreak)
+            val nextMilestone = HabitMilestones.getNextMilestone(currentStreak)
                 ?: return null
 
             val daysLeft = nextMilestone.days - currentStreak

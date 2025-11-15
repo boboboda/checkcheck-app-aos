@@ -37,6 +37,11 @@ object HabitLimits {
     const val ERROR_DAILY_COIN_LIMIT = "오늘 획득 가능한 코인을 모두 받았습니다 (최대 ${MAX_DAILY_HABIT_COINS}코인/일)"
     const val ERROR_MONTHLY_COIN_LIMIT = "이번 달 획득 가능한 코인을 모두 받았습니다 (최대 ${MAX_MONTHLY_HABIT_COINS}코인/월)"
 
+
+
+
+
+
     // ============================================
     // 헬퍼 함수
     // ============================================
