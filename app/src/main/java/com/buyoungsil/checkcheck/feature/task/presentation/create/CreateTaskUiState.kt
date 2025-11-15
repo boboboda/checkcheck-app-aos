@@ -21,5 +21,7 @@ data class CreateTaskUiState(
     val groupMembers: List<GroupMember> = emptyList(),
     val loading: Boolean = false,
     val success: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val requiresApproval: Boolean = false,  // ✨ 추가
+
 )

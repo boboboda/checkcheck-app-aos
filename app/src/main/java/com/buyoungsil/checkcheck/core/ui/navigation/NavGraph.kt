@@ -167,6 +167,10 @@ fun NavGraph(
                 },
                 onNavigateToTaskCreate = {
                     navController.navigate(Screen.TaskCreate.createRoute(groupId))
+                },
+                // ✨ 추가
+                onNavigateToTaskList = {
+                    navController.navigate(Screen.TaskList.createRoute(groupId))
                 }
             )
         }

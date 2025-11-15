@@ -1,5 +1,6 @@
 package com.buyoungsil.checkcheck.feature.task.data.firebase
 
+import com.buyoungsil.checkcheck.feature.task.domain.model.ApprovalStatus
 import com.buyoungsil.checkcheck.feature.task.domain.model.Task
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskPriority
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
@@ -24,6 +25,10 @@ data class TaskFirestoreDto(
     val reminderEnabled: Boolean = false,
     val reminderMinutesBefore: Int = 60,
     val coinReward: Int = 0,
+    val requiresApproval: Boolean = false,  // ✨ 추가
+    val approvalStatus: String? = null,  // ✨ 추가
+    val approvedBy: String? = null,  // ✨ 추가
+    val approvedAt: Long? = null,  // ✨ 추가
     val completedBy: String? = null,
     val completedAt: Long? = null,
     val createdBy: String = "",
@@ -35,7 +40,8 @@ data class TaskFirestoreDto(
     constructor() : this(
         "", "", "", null, null, null,
         TaskStatus.PENDING.name, TaskPriority.NORMAL.name,
-        null, null, false, 60, 0, null, null, "", null, null
+        null, null, false, 60, 0, false, null, null, null,  // ✨ 4개 추가
+        null, null, "", null, null
     )
 
     fun toDomain(): Task {
@@ -61,6 +67,16 @@ data class TaskFirestoreDto(
             reminderEnabled = reminderEnabled,
             reminderMinutesBefore = reminderMinutesBefore,
             coinReward = coinReward,
+            requiresApproval = requiresApproval,  // ✨ 추가
+            approvalStatus = approvalStatus?.let {  // ✨ 추가
+                try {
+                    ApprovalStatus.valueOf(it)
+                } catch (e: Exception) {
+                    null
+                }
+            },
+            approvedBy = approvedBy,  // ✨ 추가
+            approvedAt = approvedAt,  // ✨ 추가
             completedBy = completedBy,
             completedAt = completedAt,
             createdBy = createdBy,
@@ -85,6 +101,10 @@ data class TaskFirestoreDto(
                 reminderEnabled = task.reminderEnabled,
                 reminderMinutesBefore = task.reminderMinutesBefore,
                 coinReward = task.coinReward,
+                requiresApproval = task.requiresApproval,  // ✨ 추가
+                approvalStatus = task.approvalStatus?.name,  // ✨ 추가
+                approvedBy = task.approvedBy,  // ✨ 추가
+                approvedAt = task.approvedAt,  // ✨ 추가
                 completedBy = task.completedBy,
                 completedAt = task.completedAt,
                 createdBy = task.createdBy,

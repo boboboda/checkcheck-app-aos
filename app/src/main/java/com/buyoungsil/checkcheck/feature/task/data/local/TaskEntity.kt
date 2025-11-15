@@ -2,6 +2,7 @@ package com.buyoungsil.checkcheck.feature.task.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.buyoungsil.checkcheck.feature.task.domain.model.ApprovalStatus
 import com.buyoungsil.checkcheck.feature.task.domain.model.Task
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskPriority
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
@@ -24,6 +25,10 @@ data class TaskEntity(
     val reminderEnabled: Boolean,
     val reminderMinutesBefore: Int,
     val coinReward: Int,
+    val requiresApproval: Boolean,  // ✨ 추가
+    val approvalStatus: String?,  // ✨ 추가
+    val approvedBy: String?,  // ✨ 추가
+    val approvedAt: Long?,  // ✨ 추가
     val completedBy: String?,
     val completedAt: Long?,
     val createdBy: String,
@@ -45,6 +50,10 @@ data class TaskEntity(
             reminderEnabled = reminderEnabled,
             reminderMinutesBefore = reminderMinutesBefore,
             coinReward = coinReward,
+            requiresApproval = requiresApproval,  // ✨ 추가
+            approvalStatus = approvalStatus?.let { ApprovalStatus.valueOf(it) },  // ✨ 추가
+            approvedBy = approvedBy,  // ✨ 추가
+            approvedAt = approvedAt,  // ✨ 추가
             completedBy = completedBy,
             completedAt = completedAt,
             createdBy = createdBy,
@@ -69,6 +78,10 @@ data class TaskEntity(
                 reminderEnabled = task.reminderEnabled,
                 reminderMinutesBefore = task.reminderMinutesBefore,
                 coinReward = task.coinReward,
+                requiresApproval = task.requiresApproval,  // ✨ 추가
+                approvalStatus = task.approvalStatus?.name,  // ✨ 추가
+                approvedBy = task.approvedBy,  // ✨ 추가
+                approvedAt = task.approvedAt,  // ✨ 추가
                 completedBy = task.completedBy,
                 completedAt = task.completedAt,
                 createdBy = task.createdBy,

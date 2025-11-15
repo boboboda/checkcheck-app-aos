@@ -11,5 +11,6 @@ data class TaskListUiState(
     val tasks: List<Task> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isPersonalMode: Boolean = false  // ✅ 개인 태스크 모드 여부
+    val isPersonalMode: Boolean = false,  // ✅ 개인 태스크 모드 여부
+    val currentUserId: String? = null
 )

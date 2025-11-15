@@ -13,6 +13,7 @@ import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetGroupHabitsUseC
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetHabitStatisticsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.ToggleHabitCheckUseCase
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
+import com.buyoungsil.checkcheck.feature.task.domain.usecase.ApproveTaskUseCase
 import com.buyoungsil.checkcheck.feature.task.domain.usecase.CompleteTaskUseCase
 import com.buyoungsil.checkcheck.feature.task.domain.usecase.DeleteTaskUseCase
 import com.buyoungsil.checkcheck.feature.task.domain.usecase.GetGroupTasksUseCase
@@ -33,6 +34,7 @@ class GroupDetailViewModel @Inject constructor(
     private val completeTaskUseCase: CompleteTaskUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase,
     private val leaveGroupUseCase: LeaveGroupUseCase,
+    private val approveTaskUseCase: ApproveTaskUseCase,
     private val updateGroupMemberNicknameUseCase: UpdateGroupMemberNicknameUseCase,
     savedStateHandle: SavedStateHandle,
     private val authManager: FirebaseAuthManager
@@ -190,6 +192,36 @@ class GroupDetailViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(error = error.message ?: "닉네임 변경 실패")
                     }
+                }
+        }
+    }
+
+    // ✨ 승인 함수 추가
+    fun onApproveTask(taskId: String) {
+        viewModelScope.launch {
+            Log.d(TAG, "태스크 승인: $taskId")
+            approveTaskUseCase(taskId, currentUserId, approved = true)
+                .onSuccess {
+                    Log.d(TAG, "✅ 승인 성공")
+                }
+                .onFailure { error ->
+                    Log.e(TAG, "❌ 승인 실패", error)
+                    _uiState.update { it.copy(error = error.message) }
+                }
+        }
+    }
+
+    // ✨ 거부 함수 추가
+    fun onRejectTask(taskId: String) {
+        viewModelScope.launch {
+            Log.d(TAG, "태스크 거부: $taskId")
+            approveTaskUseCase(taskId, currentUserId, approved = false)
+                .onSuccess {
+                    Log.d(TAG, "✅ 거부 성공")
+                }
+                .onFailure { error ->
+                    Log.e(TAG, "❌ 거부 실패", error)
+                    _uiState.update { it.copy(error = error.message) }
                 }
         }
     }

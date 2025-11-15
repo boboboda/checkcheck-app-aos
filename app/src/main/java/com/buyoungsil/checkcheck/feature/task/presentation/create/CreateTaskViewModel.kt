@@ -151,11 +151,11 @@ class CreateTaskViewModel @Inject constructor(
 
             val task = Task(
                 id = "",
-                groupId = groupId,  // ✅ 빈 문자열이면 개인 할일
+                groupId = groupId,
                 title = currentState.title,
                 description = currentState.description.takeIf { it.isNotBlank() },
                 assigneeId = currentState.assigneeId,
-                assigneeName = currentState.assigneeName,  // ✅ 그룹 닉네임 저장
+                assigneeName = currentState.assigneeName,
                 status = TaskStatus.PENDING,
                 priority = currentState.priority,
                 dueDate = currentState.dueDate,
@@ -163,7 +163,8 @@ class CreateTaskViewModel @Inject constructor(
                 reminderEnabled = currentState.reminderEnabled,
                 reminderMinutesBefore = currentState.reminderMinutesBefore,
                 createdBy = currentUserId,
-                coinReward = currentState.coinReward
+                coinReward = currentState.coinReward,
+                requiresApproval = currentState.requiresApproval  // ✨ 추가
             )
 
             createTaskUseCase(task)
@@ -226,5 +227,9 @@ class CreateTaskViewModel @Inject constructor(
     fun onCoinRewardChanged(amount: String) {
         val coinAmount = amount.toIntOrNull() ?: 0
         _uiState.update { it.copy(coinReward = coinAmount) }
+    }
+
+    fun onRequiresApprovalToggle() {
+        _uiState.update { it.copy(requiresApproval = !it.requiresApproval) }
     }
 }

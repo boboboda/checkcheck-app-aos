@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.task.domain.model.Task
+import com.buyoungsil.checkcheck.feature.task.domain.usecase.ApproveTaskUseCase
 import com.buyoungsil.checkcheck.feature.task.domain.usecase.CompleteTaskUseCase
 import com.buyoungsil.checkcheck.feature.task.domain.usecase.DeleteTaskUseCase
 import com.buyoungsil.checkcheck.feature.task.domain.usecase.GetGroupTasksUseCase
@@ -40,6 +41,7 @@ class TaskListViewModel @Inject constructor(
     private val getPersonalTasksUseCase: GetPersonalTasksUseCase,  // ✅ 개인 태스크 추가
     private val completeTaskUseCase: CompleteTaskUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase,
+    private val approveTaskUseCase: ApproveTaskUseCase,
     savedStateHandle: SavedStateHandle,
     private val authManager: FirebaseAuthManager
 ) : ViewModel() {
@@ -55,7 +57,7 @@ class TaskListViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TaskListUiState())
     val uiState: StateFlow<TaskListUiState> = _uiState.asStateFlow()
 
-    private val currentUserId: String
+    val currentUserId: String
         get() = authManager.currentUserId ?: "anonymous"
 
     init {
@@ -124,7 +126,8 @@ class TaskListViewModel @Inject constructor(
                     tasks = tasks,
                     isLoading = false,
                     error = null,
-                    isPersonalMode = false  // ✅ 그룹 모드 플래그
+                    isPersonalMode = false,  // ✅ 그룹 모드 플래그
+                    currentUserId = currentUserId
                 )
             }
         }
@@ -196,6 +199,36 @@ class TaskListViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     Log.e(TAG, "❌ 태스크 삭제 실패", error)
+                    _uiState.update { it.copy(error = error.message) }
+                }
+        }
+    }
+
+    // ✨ 승인 함수 추가
+    fun onApproveTask(taskId: String) {
+        viewModelScope.launch {
+            Log.d(TAG, "태스크 승인 처리: $taskId")
+            approveTaskUseCase(taskId, currentUserId, approved = true)
+                .onSuccess {
+                    Log.d(TAG, "✅ 태스크 승인 성공")
+                }
+                .onFailure { error ->
+                    Log.e(TAG, "❌ 태스크 승인 실패", error)
+                    _uiState.update { it.copy(error = error.message) }
+                }
+        }
+    }
+
+    // ✨ 거부 함수 추가
+    fun onRejectTask(taskId: String) {
+        viewModelScope.launch {
+            Log.d(TAG, "태스크 거부 처리: $taskId")
+            approveTaskUseCase(taskId, currentUserId, approved = false)
+                .onSuccess {
+                    Log.d(TAG, "✅ 태스크 거부 성공")
+                }
+                .onFailure { error ->
+                    Log.e(TAG, "❌ 태스크 거부 실패", error)
                     _uiState.update { it.copy(error = error.message) }
                 }
         }

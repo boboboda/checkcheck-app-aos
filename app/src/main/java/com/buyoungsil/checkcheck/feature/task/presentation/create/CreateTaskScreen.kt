@@ -2,8 +2,10 @@ package com.buyoungsil.checkcheck.feature.task.presentation.create
 
 import AssigneePickerDialog
 import android.os.Build
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -12,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -478,6 +481,45 @@ fun CreateTaskScreen(
                                 color = OrangePrimary,
                                 modifier = Modifier.padding(start = 4.dp)
                             )
+
+                            // ✨ 승인 필요 토글 추가
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { viewModel.onRequiresApprovalToggle() }
+                                    .padding(vertical = 12.dp, horizontal = 8.dp)
+                            ) {
+                                Checkbox(
+                                    checked = uiState.requiresApproval,
+                                    onCheckedChange = { viewModel.onRequiresApprovalToggle() },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = OrangePrimary,
+                                        uncheckedColor = TextSecondaryLight
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = "완료 시 승인 필요",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextPrimaryLight
+                                    )
+                                    if (uiState.requiresApproval) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "👤 할일 완료 후 생성자가 승인해야 코인이 지급됩니다",
+                                            fontSize = 13.sp,
+                                            color = TextSecondaryLight,
+                                            lineHeight = 18.sp
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

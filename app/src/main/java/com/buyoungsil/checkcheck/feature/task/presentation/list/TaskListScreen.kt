@@ -197,6 +197,7 @@ fun TaskListScreen(
                         // 상태별 그룹핑
                         val pendingTasks = uiState.tasks.filter { it.status == TaskStatus.PENDING }
                         val inProgressTasks = uiState.tasks.filter { it.status == TaskStatus.IN_PROGRESS }
+                        val waitingApprovalTasks = uiState.tasks.filter { it.status == TaskStatus.WAITING_APPROVAL }  // ✨ 추가
                         val completedTasks = uiState.tasks.filter { it.status == TaskStatus.COMPLETED }
 
                         // 헤더
@@ -272,6 +273,50 @@ fun TaskListScreen(
                             item { Spacer(modifier = Modifier.height(8.dp)) }
                         }
 
+                        // ✨ 🕐 승인 대기 (새로 추가)
+                        if (waitingApprovalTasks.isNotEmpty()) {
+                            item {
+                                SectionHeader(
+                                    icon = "🕐",
+                                    title = "승인 대기",
+                                    count = waitingApprovalTasks.size
+                                )
+                            }
+                            items(
+                                items = waitingApprovalTasks,
+                                key = { it.id }
+                            ) { task ->
+                                when {
+                                    // ✅ 내가 생성자 → 승인/거부 버튼
+                                    task.createdBy == viewModel.currentUserId -> {
+                                        TaskApprovalCard(
+                                            task = task,
+                                            onApprove = { viewModel.onApproveTask(task.id) },
+                                            onReject = { viewModel.onRejectTask(task.id) }
+                                        )
+                                    }
+                                    // ✅ 내가 생성자 아님 → 승인 대기 표시만
+                                    else -> {
+                                        TaskCard(
+                                            taskName = task.title,
+                                            isCompleted = false,
+                                            status = task.status.name,
+                                            priority = task.priority.name.lowercase(),
+                                            dueDate = task.dueDate,
+                                            dueTime = task.dueTime,
+                                            reminderMinutes = task.reminderMinutesBefore,
+                                            assignee = task.assigneeName,
+                                            createdBy = task.createdBy,
+                                            currentUserId = uiState.currentUserId,
+                                            onCheck = { }, // 체크 불가
+                                            onDelete = null // 삭제 불가
+                                        )
+                                    }
+                                }
+                            }
+                            item { Spacer(modifier = Modifier.height(8.dp)) }
+                        }
+
                         // ⏰ 대기 중
                         if (pendingTasks.isNotEmpty()) {
                             item {
@@ -288,10 +333,16 @@ fun TaskListScreen(
                                 TaskCard(
                                     taskName = task.title,
                                     isCompleted = task.status == TaskStatus.COMPLETED,
+                                    status = task.status.name,  // ✨ 추가
                                     priority = task.priority.name.lowercase(),
                                     dueDate = task.dueDate,
+                                    dueTime = task.dueTime,
+                                    reminderMinutes = task.reminderMinutesBefore,
                                     assignee = task.assigneeName,
-                                    onCheck = { viewModel.onCompleteTask(task.id) }
+                                    createdBy = task.createdBy,
+                                    currentUserId = uiState.currentUserId,
+                                    onCheck = { viewModel.onCompleteTask(task.id) },
+                                    onDelete = { showDeleteDialog = task.id }
                                 )
                             }
                             item { Spacer(modifier = Modifier.height(8.dp)) }

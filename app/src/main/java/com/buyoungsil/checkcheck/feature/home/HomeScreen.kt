@@ -543,7 +543,7 @@ private fun EmptyGroupCard(onNavigateToGroupList: () -> Unit) {
     }
 }
 
-private fun formatDueDateTime(dueDate: LocalDate, dueTime: LocalTime?): String {
+fun formatDueDateTime(dueDate: LocalDate, dueTime: LocalTime?): String {
     val deadline = if (dueTime != null) {
         LocalDateTime.of(dueDate, dueTime)
     } else {

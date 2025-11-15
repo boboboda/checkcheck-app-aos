@@ -25,6 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitCard
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
 import com.buyoungsil.checkcheck.feature.task.presentation.list.TaskCard
+import com.buyoungsil.checkcheck.feature.task.presentation.list.TaskApprovalCard  // ✨ 추가
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
@@ -32,6 +33,7 @@ import com.buyoungsil.checkcheck.ui.theme.*
  * ✅ 스피드 다이얼 FAB
  * ✅ 초대 코드 다이얼로그
  * ✅ 그룹 나가기
+ * ✅ 승인 프로세스 UI
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +41,8 @@ fun GroupDetailScreen(
     viewModel: GroupDetailViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
     onNavigateToHabitCreate: (String) -> Unit,
-    onNavigateToTaskCreate: () -> Unit
+    onNavigateToTaskCreate: () -> Unit,
+    onNavigateToTaskList: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showOptionsMenu by remember { mutableStateOf(false) }
@@ -93,7 +96,6 @@ fun GroupDetailScreen(
                             )
                         }
 
-                        // ✅ 드롭다운 메뉴
                         DropdownMenu(
                             expanded = showOptionsMenu,
                             onDismissRequest = { showOptionsMenu = false },
@@ -154,7 +156,6 @@ fun GroupDetailScreen(
         },
         containerColor = OrangeBackground,
         floatingActionButton = {
-            // ✅ 스피드 다이얼 FAB
             SpeedDialFAB(
                 isExpanded = isFabExpanded,
                 onExpandedChange = { isFabExpanded = it },
@@ -162,8 +163,12 @@ fun GroupDetailScreen(
                     uiState.group?.let { onNavigateToHabitCreate(it.id) }
                     isFabExpanded = false
                 },
-                onTaskClick = {
+                onTaskCreateClick = {
                     onNavigateToTaskCreate()
+                    isFabExpanded = false
+                },
+                onTaskListClick = {
+                    onNavigateToTaskList()
                     isFabExpanded = false
                 }
             )
@@ -237,7 +242,7 @@ fun GroupDetailScreen(
                                 todayCompletedCount = uiState.todayCompletedCount,
                                 todayTotalCount = uiState.todayTotalCount,
                                 isOwner = uiState.group?.ownerId == uiState.currentUserId,
-                                myNickname = uiState.myNickname  // ✅ 이 줄 추가
+                                myNickname = uiState.myNickname
                             )
                         }
 
@@ -297,19 +302,50 @@ fun GroupDetailScreen(
                                 items = uiState.tasks,
                                 key = { it.id }
                             ) { task ->
-                                TaskCard(
-                                    taskName = task.title,
-                                    isCompleted = task.status == TaskStatus.COMPLETED,
-                                    priority = task.priority.name.lowercase(),
-                                    dueDate = task.dueDate,
-                                    dueTime = task.dueTime,  // ✅ 추가
-                                    reminderMinutes = task.reminderMinutesBefore,  // ✅ 추가
-                                    assignee = task.assigneeName,
-                                    createdBy = task.createdBy,  // ✅ 추가
-                                    currentUserId = uiState.currentUserId,  // ✅ 추가
-                                    onCheck = { viewModel.onCompleteTask(task.id) },
-                                    onDelete = { showDeleteDialog = task.id }  // ✅ 추가
-                                )
+                                when {
+                                    // ✅ 승인 대기 상태 & 내가 생성자 → TaskApprovalCard (승인/거부 버튼)
+                                    task.status == TaskStatus.WAITING_APPROVAL && task.createdBy == uiState.currentUserId -> {
+                                        TaskApprovalCard(
+                                            task = task,
+                                            onApprove = { viewModel.onApproveTask(task.id) },
+                                            onReject = { viewModel.onRejectTask(task.id) }
+                                        )
+                                    }
+                                    // ✅ 승인 대기 상태 & 내가 생성자 아님 → TaskCard (승인 대기 표시만)
+                                    task.status == TaskStatus.WAITING_APPROVAL -> {
+                                        TaskCard(
+                                            taskName = task.title,
+                                            isCompleted = false,
+                                            status = task.status.name,
+                                            priority = task.priority.name.lowercase(),
+                                            dueDate = task.dueDate,
+                                            dueTime = task.dueTime,
+                                            reminderMinutes = task.reminderMinutesBefore,
+                                            assignee = task.assigneeName,
+                                            createdBy = task.createdBy,
+                                            currentUserId = uiState.currentUserId,
+                                            onCheck = { }, // 체크 불가
+                                            onDelete = null // 삭제 불가
+                                        )
+                                    }
+                                    // ✅ 일반 상태 → TaskCard
+                                    else -> {
+                                        TaskCard(
+                                            taskName = task.title,
+                                            isCompleted = task.status == TaskStatus.COMPLETED,
+                                            status = task.status.name,
+                                            priority = task.priority.name.lowercase(),
+                                            dueDate = task.dueDate,
+                                            dueTime = task.dueTime,
+                                            reminderMinutes = task.reminderMinutesBefore,
+                                            assignee = task.assigneeName,
+                                            createdBy = task.createdBy,
+                                            currentUserId = uiState.currentUserId,
+                                            onCheck = { viewModel.onCompleteTask(task.id) },
+                                            onDelete = { showDeleteDialog = task.id }
+                                        )
+                                    }
+                                }
                             }
                         }
 
@@ -380,7 +416,6 @@ fun GroupDetailScreen(
         )
     }
 
-    // ✅ 초대 코드 다이얼로그
     if (showInviteDialog && uiState.group != null) {
         InviteCodeDialog(
             groupName = uiState.group!!.name,
@@ -389,7 +424,6 @@ fun GroupDetailScreen(
         )
     }
 
-    // ✅ 그룹 나가기 확인 다이얼로그
     if (showLeaveDialog && uiState.group != null) {
         AlertDialog(
             onDismissRequest = { showLeaveDialog = false },
@@ -426,14 +460,15 @@ fun GroupDetailScreen(
 }
 
 /**
- * ✨ 스피드 다이얼 FAB
+ * ✨ 스피드 다이얼 FAB (수정됨)
  */
 @Composable
 private fun SpeedDialFAB(
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onHabitClick: () -> Unit,
-    onTaskClick: () -> Unit
+    onTaskCreateClick: () -> Unit,
+    onTaskListClick: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.End,
@@ -448,6 +483,15 @@ private fun SpeedDialFAB(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // 할일 목록 보기
+                SpeedDialItem(
+                    icon = Icons.Default.List,
+                    label = "할일 목록",
+                    onClick = onTaskListClick,
+                    backgroundColor = Color(0xFF4CAF50)
+                )
+
+                // 습관 추가
                 SpeedDialItem(
                     icon = Icons.Default.CheckCircle,
                     label = "습관 추가",
@@ -455,10 +499,11 @@ private fun SpeedDialFAB(
                     backgroundColor = OrangePrimary
                 )
 
+                // 할일 추가
                 SpeedDialItem(
-                    icon = Icons.Default.Assignment,
+                    icon = Icons.Default.Add,
                     label = "할일 추가",
-                    onClick = onTaskClick,
+                    onClick = onTaskCreateClick,
                     backgroundColor = OrangeSecondary
                 )
             }
@@ -492,7 +537,7 @@ private fun SpeedDialFAB(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = if (isExpanded) "닫기" else "추가",
+                    contentDescription = if (isExpanded) "닫기" else "메뉴",
                     modifier = Modifier
                         .size(28.dp)
                         .rotate(rotation),
@@ -549,8 +594,6 @@ private fun SpeedDialItem(
     }
 }
 
-
-
 @Composable
 private fun GroupInfoCard(
     group: com.buyoungsil.checkcheck.feature.group.domain.model.Group?,
@@ -558,7 +601,7 @@ private fun GroupInfoCard(
     todayCompletedCount: Int,
     todayTotalCount: Int,
     isOwner: Boolean,
-    myNickname: String?  // ✅ 추가
+    myNickname: String?
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -604,12 +647,10 @@ private fun GroupInfoCard(
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
-                    // ✅ Option 3: 그룹명 (내 닉네임) + 역할 배지
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // 그룹명
                         Text(
                             text = group?.name ?: "그룹",
                             style = MaterialTheme.typography.titleLarge,
@@ -617,7 +658,6 @@ private fun GroupInfoCard(
                             color = TextPrimaryLight
                         )
 
-                        // ✅ 내 닉네임 표시
                         if (myNickname != null) {
                             Text(
                                 text = "($myNickname)",
@@ -627,7 +667,6 @@ private fun GroupInfoCard(
                             )
                         }
 
-                        // 역할 배지
                         Surface(
                             shape = ComponentShapes.Badge,
                             color = if (isOwner) {

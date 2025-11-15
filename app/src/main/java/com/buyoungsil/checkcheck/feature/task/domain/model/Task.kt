@@ -17,6 +17,10 @@ data class Task(
     val reminderEnabled: Boolean = false,
     val reminderMinutesBefore: Int = 60,
     val coinReward: Int = 0,
+    val requiresApproval: Boolean = false,  // ✨ 추가
+    val approvalStatus: ApprovalStatus? = null,  // ✨ 추가
+    val approvedBy: String? = null,  // ✨ 추가
+    val approvedAt: Long? = null,  // ✨ 추가
     val completedBy: String? = null,
     val completedAt: Long? = null,
     val createdBy: String,
@@ -27,6 +31,7 @@ data class Task(
 enum class TaskStatus(val displayName: String, val icon: String) {
     PENDING("대기중", "⏰"),
     IN_PROGRESS("진행중", "🔄"),
+    WAITING_APPROVAL("승인 대기", "🕐"),  // ✨ 추가
     COMPLETED("완료", "✅"),
     EXPIRED("만료", "❌")
 }

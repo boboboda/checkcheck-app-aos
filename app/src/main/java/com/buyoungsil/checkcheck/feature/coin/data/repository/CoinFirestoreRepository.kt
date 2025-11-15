@@ -201,13 +201,7 @@ class CoinFirestoreRepository @Inject constructor(
     }
 
 
-    // ========================================
-// 📝 CoinFirestoreRepository.kt 수정
-// ========================================
-//
-// 경로: app/src/main/java/com/buyoungsil/checkcheck/feature/coin/data/repository/CoinFirestoreRepository.kt
-//
-// rewardHabitCompletion 메서드를 아래 코드로 **전체 교체**하세요:
+
 
     override suspend fun rewardHabitCompletion(
         userId: String,
@@ -295,17 +289,41 @@ class CoinFirestoreRepository @Inject constructor(
         return try {
             Log.d(TAG, "========================================")
             Log.d(TAG, "✅ 할일 완료 보상 지급 시작")
-            Log.d(TAG, "userId: $userId, taskId: $taskId, amount: $amount")
+            Log.d(TAG, "  - 받는 사람: $userId")
+            Log.d(TAG, "  - 주는 사람: $fromUserId")
+            Log.d(TAG, "  - 금액: $amount")
+            Log.d(TAG, "  - taskId: $taskId")
 
-            // 사용자 이름 가져오기
+            // 1. 주는 사람 지갑 확인 (잔액 검증) ✨ 추가
+            val fromWalletDoc = walletsCollection.document(fromUserId).get().await()
+            val fromWallet = fromWalletDoc.toObject(CoinWalletFirestoreDto::class.java)
+                ?: throw Exception("코인 지갑을 찾을 수 없습니다")
+
+            val totalCoins = fromWallet.familyCoins + fromWallet.rewardCoins
+            if (totalCoins < amount) {
+                throw Exception("코인이 부족합니다 (보유: ${totalCoins}, 필요: ${amount})")
+            }
+            Log.d(TAG, "  - 주는 사람 잔액 확인 완료: ${totalCoins}코인")
+
+            // 2. 사용자 이름 가져오기
             val userDoc = usersCollection.document(userId).get().await()
             val fromUserDoc = usersCollection.document(fromUserId).get().await()
             val userName = userDoc.getString("displayName") ?: "누군가"
             val fromUserName = fromUserDoc.getString("displayName") ?: "누군가"
 
-            // Firestore 배치 작업
+            // 3. Firestore 배치 작업
             firestore.runBatch { batch ->
-                // 1. 지갑 업데이트
+                // 3-1. 주는 사람 지갑 차감 ✨ 추가
+                batch.update(
+                    walletsCollection.document(fromUserId),
+                    mapOf(
+                        "familyCoins" to FieldValue.increment(-amount.toLong()),
+                        "totalSpent" to FieldValue.increment(amount.toLong())
+                    )
+                )
+                Log.d(TAG, "  - $fromUserName 지갑에서 ${amount}코인 차감")
+
+                // 3-2. 받는 사람 지갑 증가
                 batch.update(
                     walletsCollection.document(userId),
                     mapOf(
@@ -313,8 +331,9 @@ class CoinFirestoreRepository @Inject constructor(
                         "totalEarned" to FieldValue.increment(amount.toLong())
                     )
                 )
+                Log.d(TAG, "  - $userName 지갑에 ${amount}코인 지급")
 
-                // 2. 거래 내역 생성
+                // 3-3. 거래 내역 생성
                 val transaction = CoinTransaction(
                     id = transactionsCollection.document().id,
                     fromUserId = fromUserId,
@@ -323,13 +342,15 @@ class CoinFirestoreRepository @Inject constructor(
                     toUserName = userName,
                     amount = amount,
                     type = TransactionType.TASK_COMPLETION,
-                    relatedTaskId = taskId
+                    relatedTaskId = taskId,
+                    message = "할일 완료 보상"
                 )
                 val transactionDto = CoinTransactionFirestoreDto.fromDomain(transaction)
                 batch.set(transactionsCollection.document(transaction.id), transactionDto)
             }.await()
 
             Log.d(TAG, "✅ 할일 완료 보상 지급 완료")
+            Log.d(TAG, "  - $fromUserName → $userName: ${amount}코인")
             Log.d(TAG, "========================================")
             Result.success(Unit)
         } catch (e: Exception) {
