@@ -200,13 +200,14 @@ class CoinFirestoreRepository @Inject constructor(
         }
     }
 
+
     // ========================================
 // 📝 CoinFirestoreRepository.kt 수정
 // ========================================
 //
-// 경로: feature/coin/data/repository/CoinFirestoreRepository.kt
+// 경로: app/src/main/java/com/buyoungsil/checkcheck/feature/coin/data/repository/CoinFirestoreRepository.kt
 //
-// rewardHabitCompletion 메서드를 아래와 같이 수정하세요:
+// rewardHabitCompletion 메서드를 아래 코드로 **전체 교체**하세요:
 
     override suspend fun rewardHabitCompletion(
         userId: String,
@@ -239,43 +240,45 @@ class CoinFirestoreRepository @Inject constructor(
             Log.d(TAG, "월간 코인: $newMonthlyCoins/${HabitLimits.MAX_MONTHLY_HABIT_COINS}")
             Log.d(TAG, "일간 코인: $newDailyCoins/${HabitLimits.MAX_DAILY_HABIT_COINS}")
 
-            // 3. 업데이트할 데이터 준비
-            val updates = mapOf(
-                "rewardCoins" to FieldValue.increment(coins.toLong()),
-                "totalEarned" to FieldValue.increment(coins.toLong()),
-                "monthlyRewardCoins" to newMonthlyCoins,
-                "dailyRewardCoins" to newDailyCoins,
-                "lastMonthReset" to if (needsMonthReset) Date(now) else walletDto.lastMonthReset,
-                "lastDayReset" to if (needsDayReset) Date(now) else walletDto.lastDayReset,
-                "lastUpdated" to FieldValue.serverTimestamp()
-            )
-
-            // 4. 배치 작업
+            // 3. 배치 작업 (Firestore Transaction)
             firestore.runBatch { batch ->
-                // 4-1. 지갑 업데이트
-                batch.update(walletsCollection.document(userId), updates)
+                // 3-1. 지갑 업데이트
+                val updateMap = mutableMapOf<String, Any>(
+                    "rewardCoins" to FieldValue.increment(coins.toLong()),
+                    "totalEarned" to FieldValue.increment(coins.toLong()),
+                    "monthlyRewardCoins" to newMonthlyCoins,
+                    "dailyRewardCoins" to newDailyCoins,
+                    "lastUpdated" to Date(now)
+                )
 
-                // 4-2. 거래 내역 저장
-                val transaction = mapOf(
-                    "id" to UUID.randomUUID().toString(),
-                    "fromUserId" to "system",
-                    "toUserId" to userId,
-                    "amount" to coins,
-                    "type" to "HABIT_REWARD",
-                    "relatedHabitId" to habitId,
-                    "message" to "습관 완료 보상",
-                    "timestamp" to FieldValue.serverTimestamp()
+                if (needsMonthReset) {
+                    updateMap["lastMonthReset"] = Date(now)
+                }
+                if (needsDayReset) {
+                    updateMap["lastDayReset"] = Date(now)
+                }
+
+                batch.update(walletsCollection.document(userId), updateMap)
+
+                // 3-2. 거래 내역 생성
+                val transaction = CoinTransaction(
+                    id = transactionsCollection.document().id,
+                    fromUserId = "system",
+                    fromUserName = "시스템",
+                    toUserId = userId,
+                    toUserName = "",
+                    amount = coins,
+                    type = TransactionType.HABIT_REWARD,
+                    relatedHabitId = habitId,
+                    message = "습관 마일스톤 달성 보상"
                 )
-                batch.set(
-                    transactionsCollection.document(),
-                    transaction
-                )
+                val transactionDto = CoinTransactionFirestoreDto.fromDomain(transaction)
+                batch.set(transactionsCollection.document(transaction.id), transactionDto)
             }.await()
 
-            Log.d(TAG, "✅ 습관 완료 보상 성공: $coins 코인")
+            Log.d(TAG, "✅ 습관 완료 보상 성공")
             Log.d(TAG, "========================================")
             Result.success(Unit)
-
         } catch (e: Exception) {
             Log.e(TAG, "❌ 습관 완료 보상 실패", e)
             Log.d(TAG, "========================================")

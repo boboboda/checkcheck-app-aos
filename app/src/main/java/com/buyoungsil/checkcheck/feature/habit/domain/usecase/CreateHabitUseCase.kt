@@ -9,8 +9,10 @@ import javax.inject.Inject
 /**
  * 습관 생성 UseCase
  *
- * 🆕 변경 사항:
+ * ✅ 개선 사항:
  * - ValidateHabitLimitsUseCase를 통한 습관 개수 제한 체크
+ * - 최대 10개 제한
+ * - 동시 진행 5개 제한
  */
 class CreateHabitUseCase @Inject constructor(
     private val repository: HabitRepository,
@@ -18,10 +20,10 @@ class CreateHabitUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(habit: Habit): Result<Habit> {
         return try {
-            Log.d("CreateHabitUseCase", "=== UseCase 시작 ===")
+            Log.d("CreateHabitUseCase", "=== 습관 생성 시작 ===")
             Log.d("CreateHabitUseCase", "habit: $habit")
 
-            // 🆕 1. 습관 개수 제한 체크
+            // ✅ 1. 습관 개수 제한 체크
             val (canCreate, errorMessage) = validateHabitLimitsUseCase.canCreateHabit(habit.userId)
             if (!canCreate) {
                 Log.w("CreateHabitUseCase", "⚠️ 습관 생성 제한: $errorMessage")
