@@ -1,9 +1,8 @@
 package com.buyoungsil.checkcheck.feature.habit.domain.usecase
 
 import android.util.Log
-import com.buyoungsil.checkcheck.core.constants.HabitLimits
+import com.buyoungsil.checkcheck.feature.coin.domain.model.HabitLimits
 import com.buyoungsil.checkcheck.feature.coin.domain.usecase.RewardHabitCompletionUseCase
-import com.buyoungsil.checkcheck.feature.coin.domain.usecase.ValidateMonthlyHabitCoinsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitRewardRecord
 import com.buyoungsil.checkcheck.feature.habit.domain.repository.HabitRepository
 import com.google.firebase.firestore.FirebaseFirestore
@@ -21,7 +20,7 @@ import javax.inject.Inject
 class CheckHabitMilestoneUseCase @Inject constructor(
     private val habitRepository: HabitRepository,
     private val rewardHabitCompletionUseCase: RewardHabitCompletionUseCase,
-    private val validateMonthlyHabitCoinsUseCase: ValidateMonthlyHabitCoinsUseCase,  // 🆕 추가
+    private val validateHabitLimitsUseCase: ValidateHabitLimitsUseCase,  // 🆕 추가
     private val firestore: FirebaseFirestore
 ) {
     companion object {

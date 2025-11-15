@@ -8,17 +8,27 @@ import javax.inject.Inject
 
 /**
  * 습관 생성 UseCase
- * ✅ 생성된 Habit 객체를 반환하도록 수정 (알림 설정을 위해)
- * ✅ 디버깅 로그 추가
+ *
+ * 🆕 변경 사항:
+ * - ValidateHabitLimitsUseCase를 통한 습관 개수 제한 체크
  */
 class CreateHabitUseCase @Inject constructor(
-    private val repository: HabitRepository
+    private val repository: HabitRepository,
+    private val validateHabitLimitsUseCase: ValidateHabitLimitsUseCase
 ) {
     suspend operator fun invoke(habit: Habit): Result<Habit> {
         return try {
             Log.d("CreateHabitUseCase", "=== UseCase 시작 ===")
             Log.d("CreateHabitUseCase", "habit: $habit")
 
+            // 🆕 1. 습관 개수 제한 체크
+            val (canCreate, errorMessage) = validateHabitLimitsUseCase.canCreateHabit(habit.userId)
+            if (!canCreate) {
+                Log.w("CreateHabitUseCase", "⚠️ 습관 생성 제한: $errorMessage")
+                return Result.failure(Exception(errorMessage))
+            }
+
+            // 2. 습관 생성
             val newHabit = habit.copy(
                 id = UUID.randomUUID().toString(),
                 createdAt = System.currentTimeMillis(),

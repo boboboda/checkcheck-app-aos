@@ -1,10 +1,8 @@
 package com.buyoungsil.checkcheck.di
 
-import com.buyoungsil.checkcheck.feature.coin.data.repository.CoinFirestoreRepository
 import com.buyoungsil.checkcheck.feature.coin.domain.repository.CoinRepository
 import com.buyoungsil.checkcheck.feature.habit.domain.repository.HabitRepository
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.ValidateHabitLimitsUseCase
-import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,12 +11,17 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class CoinModule {
+object UseCaseModule {
 
-    @Binds
+    @Provides
     @Singleton
-    abstract fun bindCoinRepository(
-        coinFirestoreRepository: CoinFirestoreRepository
-    ): CoinRepository
-
+    fun provideValidateHabitLimitsUseCase(
+        habitRepository: HabitRepository,
+        coinRepository: CoinRepository
+    ): ValidateHabitLimitsUseCase {
+        return ValidateHabitLimitsUseCase(
+            habitRepository = habitRepository,
+            coinRepository = coinRepository
+        )
+    }
 }
