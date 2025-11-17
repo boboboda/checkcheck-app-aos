@@ -43,6 +43,7 @@ fun HomeScreen(
     onNavigateToGroupDetail: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToHabitList: () -> Unit,
+    onNavigateToHabitDetail: (String) -> Unit,
     onNavigateToPersonalTaskList: () -> Unit,
     onNavigateToPersonalTaskCreate: () -> Unit,
     onNavigateToCoinWallet: () -> Unit,
@@ -171,6 +172,9 @@ fun HomeScreen(
                         nextMilestoneInfo = habitWithStats.nextMilestoneInfo,
                         onCheck = {
                             habitViewModel.onHabitCheck(habitWithStats.habit.id)
+                        },
+                        onDetailClick = {  // 🆕 추가
+                            onNavigateToHabitDetail(habitWithStats.habit.id)
                         }
                     )
                 }

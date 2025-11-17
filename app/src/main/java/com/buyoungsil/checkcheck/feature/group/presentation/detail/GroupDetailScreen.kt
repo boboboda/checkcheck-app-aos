@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.buyoungsil.checkcheck.core.util.IconConverter
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitCard
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
 import com.buyoungsil.checkcheck.feature.task.presentation.list.TaskCard
@@ -43,6 +44,7 @@ fun GroupDetailScreen(
     onNavigateBack: () -> Unit,
     onNavigateToHabitCreate: (String) -> Unit,
     onNavigateToTaskCreate: () -> Unit,
+    onNavigateToHabitDetail: (String) -> Unit,
     onNavigateToTaskList: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -247,63 +249,43 @@ fun GroupDetailScreen(
                             )
                         }
 
-                        // 💪 그룹 습관 섹션
-                        item {
-                            SectionHeader(
-                                icon = "💪",
-                                title = "그룹 습관",
-                                count = uiState.sharedHabits.size
-                            )
-                        }
+//                        // 💪 그룹 습관 섹션
+//                        item {
+//                            SectionHeader(
+//                                icon = "💪",
+//                                title = "그룹 습관",
+//                                count = uiState.sharedHabits.size
+//                            )
+//                        }
+//
+//                        if (uiState.sharedHabits.isEmpty()) {
+//                            item {
+//                                EmptyCard(
+//                                    icon = "💪",
+//                                    title = "아직 공유된 습관이 없어요",
+//                                    subtitle = "+ 버튼을 눌러 습관을 공유해보세요!"
+//                                )
+//                            }
+//                        } else {
+//                            items(
+//                                items = uiState.sharedHabits,
+//                                key = { it.habit.id }
+//                            ) { habitWithStats ->
+//                                HabitCard(
+//                                    habitName = habitWithStats.habit.title,
+//                                    isCompleted = habitWithStats.isCheckedToday,
+//                                    streak = habitWithStats.statistics?.currentStreak ?: 0,
+//                                    completionRate = habitWithStats.statistics?.completionRate ?: 0f,
+//                                    habitIcon = habitWithStats.habit.icon,
+//                                    nextMilestoneInfo = habitWithStats.nextMilestoneInfo,  // 🆕 추가
+//                                    onCheck = { viewModel.onHabitCheck(habitWithStats.habit.id) },
+//                                    onDetailClick = { onNavigateToHabitDetail(habitWithStats.habit.id) }  // 🆕 추가
+//                                )
+//                            }
+//                        }
 
-                        if (uiState.sharedHabits.isEmpty()) {
-                            item {
-                                EmptyCard(
-                                    icon = "💪",
-                                    title = "아직 공유된 습관이 없어요",
-                                    subtitle = "+ 버튼을 눌러 습관을 공유해보세요!"
-                                )
-                            }
-                        } else {
-                            items(
-                                items = uiState.sharedHabits,
-                                key = { it.habit.id }
-                            ) { habitWithStats ->
-                                HabitCard(
-                                    habitName = habitWithStats.habit.title,
-                                    isCompleted = habitWithStats.isCheckedToday,
-                                    streak = habitWithStats.statistics?.currentStreak ?: 0,
-                                    completionRate = habitWithStats.statistics?.completionRate ?: 0f,
-                                    habitIcon = habitWithStats.habit.icon,
-                                    onCheck = { viewModel.onHabitCheck(habitWithStats.habit.id) }
-                                )
-                            }
-                        }
 
-                        // 🆕 그룹원 습관 섹션
-                        if (uiState.sharedHabitsByMember.isNotEmpty()) {
-                            item {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                SectionHeader(
-                                    icon = "👥",
-                                    title = "그룹원 습관",
-                                    count = uiState.sharedHabitsByMember.values.sumOf { it.size }
-                                )
-                            }
 
-                            uiState.sharedHabitsByMember.forEach { (userId, habits) ->
-                                item {
-                                    val member = uiState.groupMembers.find { it.userId == userId }
-                                    val memberName = member?.displayName ?: "알 수 없음"
-
-                                    MemberHabitSection(
-                                        memberName = memberName,
-                                        habits = habits,
-                                        onHabitClick = { /* TODO: 습관 상세 화면 */ }
-                                    )
-                                }
-                            }
-                        }
 
                         // ✅ 그룹 할일 섹션
                         item {
@@ -371,6 +353,33 @@ fun GroupDetailScreen(
                                             onDelete = { showDeleteDialog = task.id }
                                         )
                                     }
+                                }
+                            }
+                        }
+
+                        // 🆕 그룹원 습관 섹션
+                        if (uiState.sharedHabitsByMember.isNotEmpty()) {
+                            item {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                SectionHeader(
+                                    icon = "👥",
+                                    title = "그룹원 습관",
+                                    count = uiState.sharedHabitsByMember.values.sumOf { it.size }
+                                )
+                            }
+
+                            uiState.sharedHabitsByMember.forEach { (userId, habits) ->
+                                item {
+                                    val member = uiState.groupMembers.find { it.userId == userId }
+                                    val memberName = member?.displayName ?: "알 수 없음"
+
+                                    ExpandableMemberHabitCard(
+                                        memberName = memberName,
+                                        habits = habits,
+                                        onHabitClick = { habitId ->
+                                            onNavigateToHabitDetail(habitId)
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -868,154 +877,197 @@ private fun EmptyCard(
     }
 }
 
+
 /**
- * 🆕 멤버별 습관 섹션
+ * 🆕 확장 가능한 멤버 습관 카드
  */
 @Composable
-private fun MemberHabitSection(
+private fun ExpandableMemberHabitCard(
     memberName: String,
     habits: List<com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats>,
     onHabitClick: (String) -> Unit
 ) {
+    var isExpanded by remember { mutableStateOf(false) }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            ),
         shape = ComponentShapes.GroupCard,
         colors = CardDefaults.cardColors(
             containerColor = Color.White
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp
+            defaultElevation = if (isExpanded) 4.dp else 2.dp
         )
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Column {
+            // 헤더 (항상 표시)
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isExpanded = !isExpanded }
+                    .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(40.dp)
                             .clip(CircleShape)
                             .background(OrangeSurfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = memberName.take(1),
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = OrangePrimary
                         )
                     }
-                    Text(
-                        text = memberName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimaryLight
-                    )
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = memberName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimaryLight
+                        )
+                        Text(
+                            text = "${habits.size}개 습관 진행 중",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondaryLight
+                        )
+                    }
                 }
-                Text(
-                    text = "${habits.size}개",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondaryLight
+
+                // 확장 아이콘
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp
+                    else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (isExpanded) "접기" else "펼치기",
+                    tint = TextSecondaryLight,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .rotate(if (isExpanded) 0f else 0f)
                 )
             }
 
-            Divider(color = DividerLight, thickness = 1.dp)
+            // 습관 목록 (확장 시)
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                ) + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    HorizontalDivider(
+                        color = DividerLight,
+                        thickness = 1.dp
+                    )
 
-            habits.forEach { habitWithStats ->
-                MemberHabitItem(
-                    habitWithStats = habitWithStats,
-                    onClick = { onHabitClick(habitWithStats.habit.id) }
-                )
+                    habits.forEach { habitWithStats ->
+                        MemberHabitItem(
+                            habitWithStats = habitWithStats,
+                            onClick = { onHabitClick(habitWithStats.habit.id) }
+                        )
+
+                        if (habitWithStats != habits.last()) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = DividerLight.copy(alpha = 0.5f),
+                                thickness = 0.5.dp
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 /**
- * 🆕 멤버 습관 아이템
+ * 멤버 습관 아이템 (읽기 전용)
  */
 @Composable
 private fun MemberHabitItem(
     habitWithStats: com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats,
     onClick: () -> Unit
 ) {
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = ComponentShapes.GroupCard,
-        colors = CardDefaults.cardColors(
-            containerColor = if (habitWithStats.isCheckedToday) {
-                OrangeSurfaceVariant
-            } else {
-                OrangeBackground
-            }
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 1.dp
-        )
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = if (habitWithStats.isCheckedToday) {
-                        Icons.Default.CheckCircle
-                    } else {
-                        Icons.Default.RadioButtonUnchecked
-                    },
-                    contentDescription = null,
-                    tint = if (habitWithStats.isCheckedToday) {
-                        OrangePrimary
-                    } else {
-                        TextSecondaryLight
-                    },
-                    modifier = Modifier.size(24.dp)
-                )
+        // 아이콘
+        Text(
+            text = IconConverter.convertToEmoji(habitWithStats.habit.icon),
+            fontSize = 24.sp
+        )
 
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
+        // 습관 정보
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = habitWithStats.habit.title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = TextPrimaryLight
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if ((habitWithStats.statistics?.currentStreak ?: 0) > 0) {
                     Text(
-                        text = habitWithStats.habit.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = TextPrimaryLight
+                        text = "🔥 ${habitWithStats.statistics?.currentStreak}일 연속",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = OrangePrimary,
+                        fontWeight = FontWeight.Bold
                     )
+                }
+
+                if ((habitWithStats.statistics?.completionRate ?: 0f) > 0f) {
                     Text(
-                        text = "🔥 ${habitWithStats.statistics?.currentStreak ?: 0}일 연속",
+                        text = "📊 ${(habitWithStats.statistics!!.completionRate * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondaryLight
                     )
                 }
             }
+        }
 
-            habitWithStats.statistics?.let { stats ->
-                Text(
-                    text = "${stats.completionRate}%",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = OrangePrimary
-                )
-            }
+        // 완료 상태
+        if (habitWithStats.isCheckedToday) {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = "완료",
+                tint = OrangePrimary,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

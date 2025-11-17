@@ -34,7 +34,8 @@ import com.buyoungsil.checkcheck.ui.theme.*
 fun HabitListScreen(
     viewModel: HabitListViewModel,
     onNavigateToCreate: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateToDetail: (String) -> Unit,
+    onNavigateBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
@@ -326,9 +327,12 @@ fun HabitListScreen(
                                         streak = habitWithStats.statistics?.currentStreak ?: 0,
                                         completionRate = habitWithStats.statistics?.completionRate ?: 0f,
                                         habitIcon = habitWithStats.habit.icon,
-                                        nextMilestoneInfo = habitWithStats.nextMilestoneInfo,  // 🆕 이 줄 추가
+                                        nextMilestoneInfo = habitWithStats.nextMilestoneInfo,
                                         onCheck = {
                                             viewModel.onHabitCheck(habitWithStats.habit.id)
+                                        },
+                                        onDetailClick = {  // 🆕 추가
+                                            onNavigateToDetail(habitWithStats.habit.id)
                                         }
                                     )
                                 }

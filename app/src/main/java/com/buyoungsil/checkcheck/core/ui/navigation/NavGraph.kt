@@ -18,6 +18,7 @@ import com.buyoungsil.checkcheck.feature.group.presentation.detail.GroupDetailSc
 import com.buyoungsil.checkcheck.feature.group.presentation.join.JoinGroupScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.list.GroupListScreen
 import com.buyoungsil.checkcheck.feature.habit.presentation.create.CreateHabitScreen
+import com.buyoungsil.checkcheck.feature.habit.presentation.detail.HabitDetailScreen
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitListScreen
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitListViewModel
 import com.buyoungsil.checkcheck.feature.home.HomeScreen
@@ -79,7 +80,10 @@ fun NavGraph(
                 },
                 onNavigateToDebug = {
                     navController.navigate("debug_test")
-                }
+                },
+                onNavigateToHabitDetail = { habitId ->  // 🆕 추가
+                    navController.navigate(Screen.HabitDetail.createRoute(habitId))
+                },
             )
         }
 
@@ -98,7 +102,10 @@ fun NavGraph(
                 },
                 onNavigateBack = {
                     navController.popBackStack()
-                }
+                },
+                onNavigateToDetail = { habitId ->  // 🆕 추가
+                    navController.navigate(Screen.HabitDetail.createRoute(habitId))
+                },
             )
         }
 
@@ -116,6 +123,19 @@ fun NavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
+            )
+        }
+
+        composable(
+            route = "habit_detail/{habitId}",
+            arguments = listOf(
+                navArgument("habitId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val habitId = backStackEntry.arguments?.getString("habitId") ?: return@composable
+            HabitDetailScreen(
+                habitId = habitId,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -171,7 +191,10 @@ fun NavGraph(
                 // ✨ 추가
                 onNavigateToTaskList = {
                     navController.navigate(Screen.TaskList.createRoute(groupId))
-                }
+                },
+                onNavigateToHabitDetail = { habitId ->  // 🆕 추가
+                    navController.navigate(Screen.HabitDetail.createRoute(habitId))
+                },
             )
         }
 
