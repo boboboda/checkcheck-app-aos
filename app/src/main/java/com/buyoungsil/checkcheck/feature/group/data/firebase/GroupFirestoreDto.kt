@@ -1,6 +1,7 @@
 package com.buyoungsil.checkcheck.feature.group.data.firebase
 
 import com.buyoungsil.checkcheck.feature.group.domain.model.Group
+import com.buyoungsil.checkcheck.feature.group.domain.model.GroupTier
 import com.buyoungsil.checkcheck.feature.group.domain.model.GroupType
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
@@ -15,11 +16,17 @@ data class GroupFirestoreDto(
     val inviteCode: String = "",
     val ownerId: String = "",
     val memberIds: List<String> = emptyList(),
+    val tier: String = GroupTier.BASIC.name,  // ✨ 추가
+    val maxMembers: Int = 10,  // ✨ 추가
     @ServerTimestamp
-    val createdAt: Date? = null
+    val createdAt: Date? = null,
+    @ServerTimestamp
+val updatedAt: Date? = null  // ✨ 추가
 ) {
-    constructor() : this("", "", "👥", GroupType.FAMILY.name, "", "", emptyList(), null)
-
+    constructor() : this(
+        "", "", "👥", GroupType.FAMILY.name, "", "",
+        emptyList(), GroupTier.BASIC.name, 10, null, null
+    )
     fun toDomain(): Group {
         return Group(
             id = id,

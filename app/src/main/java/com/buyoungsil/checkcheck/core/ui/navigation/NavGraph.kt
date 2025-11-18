@@ -17,6 +17,7 @@ import com.buyoungsil.checkcheck.feature.group.presentation.create.CreateGroupSc
 import com.buyoungsil.checkcheck.feature.group.presentation.detail.GroupDetailScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.join.JoinGroupScreen
 import com.buyoungsil.checkcheck.feature.group.presentation.list.GroupListScreen
+import com.buyoungsil.checkcheck.feature.group.presentation.upgrade.UpgradeGroupTierScreen
 import com.buyoungsil.checkcheck.feature.habit.presentation.create.CreateHabitScreen
 import com.buyoungsil.checkcheck.feature.habit.presentation.detail.HabitDetailScreen
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitListScreen
@@ -195,8 +196,26 @@ fun NavGraph(
                 onNavigateToHabitDetail = { habitId ->  // 🆕 추가
                     navController.navigate(Screen.HabitDetail.createRoute(habitId))
                 },
+                onNavigateToUpgradeTier = { groupId ->  // ✨ 추가
+                    navController.navigate(Screen.UpgradeGroupTier.createRoute(groupId))
+                }
             )
         }
+
+        // ========== 그룹 티어 업그레이드 ==========
+        composable(
+            route = Screen.UpgradeGroupTier.route,
+            arguments = listOf(
+                navArgument("groupId") { type = NavType.StringType }
+            )
+        ) {
+            UpgradeGroupTierScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
 
         // ========== Task 화면들 ==========
 

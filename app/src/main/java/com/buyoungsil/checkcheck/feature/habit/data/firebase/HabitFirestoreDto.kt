@@ -1,6 +1,7 @@
 package com.buyoungsil.checkcheck.feature.habit.data.firebase
 
 import com.buyoungsil.checkcheck.feature.habit.domain.model.Habit
+import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitCategory
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
@@ -20,6 +21,7 @@ data class HabitFirestoreDto(
     val groupShared: Boolean = false,
     val groupId: String? = null,
     val isGroupChallenge: Boolean = false,
+    val category: String = HabitCategory.LIFE.name,  // ✨ 추가
 
     // 🆕 코인 보상 필드
     val coinRewardEnabled: Boolean = true,
@@ -77,6 +79,7 @@ data class HabitFirestoreDto(
                 icon = habit.icon,
                 color = habit.color,
                 groupShared = habit.groupShared,
+                category = habit.category.name,  // ✨ 추가
                 groupId = habit.groupId,
                 isGroupChallenge = habit.isGroupChallenge,
                 coinRewardEnabled = habit.coinRewardEnabled,   // 🆕

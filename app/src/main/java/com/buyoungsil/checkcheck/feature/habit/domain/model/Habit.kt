@@ -15,6 +15,8 @@ data class Habit(
     val groupId: String? = null,
     val isGroupChallenge: Boolean = false,
 
+    val category: HabitCategory = HabitCategory.LIFE,  // ✨ 추가
+
     // 🆕 코인 보상 관련 필드
     val coinRewardEnabled: Boolean = true,        // 코인 보상 활성화 여부
     val lastRewardStreak: Int = 0,                // 마지막으로 보상받은 streak 일수
@@ -24,3 +26,15 @@ data class Habit(
     val updatedAt: Long = System.currentTimeMillis(),
     val active: Boolean = true
 )
+
+/**
+ * 습관 카테고리
+ */
+enum class HabitCategory(val displayName: String, val icon: String) {
+    EXERCISE("운동", "🏃"),
+    STUDY("공부", "📚"),
+    HEALTH("건강", "🍎"),
+    LIFE("생활", "🏠"),
+    HOBBY("취미", "🎨"),
+    RELATIONSHIP("관계", "💬")
+}

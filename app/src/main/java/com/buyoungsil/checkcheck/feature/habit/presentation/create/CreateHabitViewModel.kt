@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
 import com.buyoungsil.checkcheck.feature.group.domain.usecase.GetMyGroupsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.model.Habit
+import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitCategory
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.CreateHabitUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -159,5 +160,9 @@ class CreateHabitViewModel @Inject constructor(
                     }
                 }
         }
+    }
+
+    fun onCategorySelect(category: HabitCategory) {
+        _uiState.update { it.copy(category = category) }
     }
 }

@@ -44,4 +44,11 @@ sealed class Screen(val route: String) {
 
     // Coin
     object CoinWallet : Screen("coin_wallet")
+
+    data class UpgradeGroupTier(val groupId: String) : Screen("upgrade_tier/{groupId}") {
+        companion object {
+            const val route = "upgrade_tier/{groupId}"
+            fun createRoute(groupId: String) = "upgrade_tier/$groupId"
+        }
+    }
 }

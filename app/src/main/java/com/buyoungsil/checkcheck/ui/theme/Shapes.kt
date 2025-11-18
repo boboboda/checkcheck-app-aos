@@ -26,7 +26,7 @@ val CheckShapes = Shapes(
  */
 object ComponentShapes {
     // 🎴 카드 Shape
-    val HabitCard = RoundedCornerShape(20.dp)           // 습관 카드
+    val HabitCard = RoundedCornerShape(12.dp)           // 습관 카드
     val GroupCard = RoundedCornerShape(24.dp)           // 그룹 카드 (더 둥글게)
     val TaskCard = RoundedCornerShape(16.dp)            // 할일 카드
     val StatCard = RoundedCornerShape(20.dp)            // 통계 카드

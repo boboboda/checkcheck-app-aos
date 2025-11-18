@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.buyoungsil.checkcheck.core.util.IconConverter
+import com.buyoungsil.checkcheck.feature.group.domain.model.Group
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitCard
 import com.buyoungsil.checkcheck.feature.task.domain.model.TaskStatus
 import com.buyoungsil.checkcheck.feature.task.presentation.list.TaskCard
@@ -45,7 +47,8 @@ fun GroupDetailScreen(
     onNavigateToHabitCreate: (String) -> Unit,
     onNavigateToTaskCreate: () -> Unit,
     onNavigateToHabitDetail: (String) -> Unit,
-    onNavigateToTaskList: () -> Unit
+    onNavigateToTaskList: () -> Unit,
+    onNavigateToUpgradeTier: (String) -> Unit  // ✨ 추가
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showOptionsMenu by remember { mutableStateOf(false) }
@@ -382,6 +385,18 @@ fun GroupDetailScreen(
                                     )
                                 }
                             }
+                        }
+
+                        item {
+                            GroupTierCard(
+                                group = uiState.group,
+                                isOwner = isOwner,
+                                onUpgradeClick = {
+                                    uiState.group?.id?.let { groupId ->
+                                        onNavigateToUpgradeTier(groupId)
+                                    }
+                                }
+                            )
                         }
 
                         // 하단 여백
@@ -903,7 +918,7 @@ private fun ExpandableMemberHabitCard(
             containerColor = Color.White
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isExpanded) 4.dp else 2.dp
+            defaultElevation = 2.dp
         )
     ) {
         Column {
@@ -1071,3 +1086,151 @@ private fun MemberHabitItem(
         }
     }
 }
+
+@Composable
+private fun GroupTierCard(
+    group: Group?,
+    isOwner: Boolean,
+    onUpgradeClick: () -> Unit
+) {
+    if (group == null) return
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = ComponentShapes.GroupCard,
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 헤더
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "그룹 티어",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimaryLight
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = group.tier.icon,
+                        fontSize = 20.sp
+                    )
+                    Text(
+                        text = group.tier.displayName,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = OrangePrimary
+                    )
+                }
+            }
+
+            Divider(color = DividerLight)
+
+            // 인원 현황
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "현재 인원",
+                    fontSize = 14.sp,
+                    color = TextSecondaryLight
+                )
+                Text(
+                    text = "${group.currentMemberCount()}/${group.maxMembers}명",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (group.currentMemberCount() >= group.maxMembers - 2) {
+                        ErrorRed
+                    } else {
+                        TextPrimaryLight
+                    }
+                )
+            }
+
+            // 진행 바
+            LinearProgressIndicator(
+                progress = group.currentMemberCount().toFloat() / group.maxMembers.toFloat(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = if (group.currentMemberCount() >= group.maxMembers - 2) {
+                    ErrorRed
+                } else {
+                    OrangePrimary
+                },
+                trackColor = OrangeBackground
+            )
+
+            // 업그레이드 버튼 (그룹장만)
+            if (isOwner && group.canUpgrade()) {
+                val nextTier = group.tier.getNextTier()
+                if (nextTier != null) {
+                    Button(
+                        onClick = onUpgradeClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = OrangePrimary
+                        )
+                    ) {
+                        Text(
+                            text = "${nextTier.icon} ${nextTier.displayName} 티어로 업그레이드",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // 인원 가득 참 경고
+            if (group.currentMemberCount() >= group.maxMembers - 2) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = ErrorRed.copy(alpha = 0.1f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "⚠️",
+                            fontSize = 16.sp
+                        )
+                        Text(
+                            text = if (group.currentMemberCount() >= group.maxMembers) {
+                                "그룹 인원이 가득 찼습니다"
+                            } else {
+                                "곧 그룹 인원이 가득 찹니다"
+                            },
+                            fontSize = 13.sp,
+                            color = ErrorRed,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+

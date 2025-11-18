@@ -4,11 +4,13 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.buyoungsil.checkcheck.core.data.firebase.FirebaseAuthManager
+import com.buyoungsil.checkcheck.feature.group.domain.model.Group
 import com.buyoungsil.checkcheck.feature.habit.domain.model.Habit
 import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitStatistics
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.CheckHabitMilestoneUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetHabitStatisticsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetPersonalHabitsUseCase
+import com.buyoungsil.checkcheck.feature.task.domain.model.Task
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -19,6 +21,10 @@ import javax.inject.Inject
 data class DebugTestUiState(
     val habits: List<Habit> = emptyList(),
     val habitStats: Map<String, HabitStatistics> = emptyMap(),
+    val tasks: List<Task> = emptyList(),
+    val groups: List<Group> = emptyList(),
+    val fcmToken: String? = null,
+    val userId: String? = null,
     val loading: Boolean = true,
     val testMessage: String? = null
 )

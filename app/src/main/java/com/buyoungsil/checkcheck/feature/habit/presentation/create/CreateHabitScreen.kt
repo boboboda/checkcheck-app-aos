@@ -1,5 +1,6 @@
 package com.buyoungsil.checkcheck.feature.habit.presentation.create
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.buyoungsil.checkcheck.core.ui.components.*
+import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitCategory
 import com.buyoungsil.checkcheck.ui.theme.*
 
 /**
@@ -154,7 +156,8 @@ fun CreateHabitScreen(
                 shape = ComponentShapes.HabitCard,
                 colors = CardDefaults.cardColors(containerColor = androidx.compose.ui.graphics.Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
+            )
+            {
                 Column(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -171,7 +174,8 @@ fun CreateHabitScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    )
+                    {
                         // 현재 선택된 아이콘
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -223,6 +227,41 @@ fun CreateHabitScreen(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("변경")
+                        }
+                    }
+                }
+            }
+
+            // 아이콘 선택 카드 다음에 추가
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = ComponentShapes.HabitCard,
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "카테고리",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryLight
+                    )
+
+                    // 카테고리 그리드
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        HabitCategory.values().forEach { category ->
+                            CategoryChip(
+                                category = category,
+                                isSelected = uiState.category == category,
+                                onClick = { viewModel.onCategorySelect(category) }
+                            )
                         }
                     }
                 }
@@ -501,6 +540,41 @@ private fun GroupSelectItem(
                     modifier = Modifier.size(24.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun CategoryChip(
+    category: HabitCategory,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = if (isSelected) OrangePrimary else OrangeBackground,
+        border = if (isSelected) {
+            BorderStroke(2.dp, OrangePrimary)
+        } else {
+            BorderStroke(1.dp, DividerLight)
+        }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = category.icon,
+                fontSize = 16.sp
+            )
+            Text(
+                text = category.displayName,
+                fontSize = 14.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) Color.White else TextPrimaryLight
+            )
         }
     }
 }
