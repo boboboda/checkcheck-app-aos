@@ -6,6 +6,8 @@ import com.buyoungsil.checkcheck.feature.group.domain.repository.GroupMemberRepo
 import com.buyoungsil.checkcheck.feature.group.domain.repository.GroupRepository
 import com.buyoungsil.checkcheck.feature.habit.data.repository.HabitFirestoreRepository
 import com.buyoungsil.checkcheck.feature.habit.domain.repository.HabitRepository
+import com.buyoungsil.checkcheck.feature.ranking.data.repository.GlobalRankingFirestoreRepository
+import com.buyoungsil.checkcheck.feature.ranking.domain.repository.GlobalRankingRepository
 import com.buyoungsil.checkcheck.feature.task.data.repository.TaskFirestoreRepository
 import com.buyoungsil.checkcheck.feature.task.domain.repository.TaskRepository
 import dagger.Binds
@@ -51,4 +53,10 @@ abstract class RepositoryModule {
     abstract fun bindGroupMemberRepository(
         groupMemberFirestoreRepository: GroupMemberFirestoreRepository
     ): GroupMemberRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindGlobalRankingRepository(
+        impl: GlobalRankingFirestoreRepository
+    ): GlobalRankingRepository
 }

@@ -5,9 +5,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,13 +21,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.buyoungsil.checkcheck.feature.habit.domain.model.HabitCategory
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
-import com.buyoungsil.checkcheck.feature.statistics.StatisticsViewModel
 import com.buyoungsil.checkcheck.ui.theme.*
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
+import androidx.core.graphics.toColorInt
+import com.buyoungsil.checkcheck.feature.ranking.domain.model.UserRanking
+import kotlinx.coroutines.launch
 
 /**
  * 🧡 오렌지 테마 통계 화면
@@ -167,23 +172,10 @@ fun StatisticsScreen(
                             AchievementBadgesCard(uiState)
                         }
 
-                        // 습관별 랭킹
-                        item {
-                            Text(
-                                text = "🏆 습관별 랭킹",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimaryLight
-                            )
-                        }
 
-                        items(
-                            items = uiState.habits.sortedByDescending {
-                                it.statistics?.currentStreak ?: 0
-                            },
-                            key = { it.habit.id }
-                        ) { habitWithStats ->
-                            HabitRankCard(habitWithStats)
+                        // 🆕 습관 랭킹 섹션 (내 습관 + 글로벌 랭킹)
+                        item {
+                            GlobalHabitRankingSection(viewModel = viewModel)
                         }
                     }
                 }
@@ -243,12 +235,12 @@ private fun OverallStatsCard(uiState: StatisticsUiState) {
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 StatItem(
-                    label = "최장 스트릭",
+                    label = "최장 연속",
                     value = "${uiState.longestStreak}일",
                     icon = "🔥"
                 )
                 StatItem(
-                    label = "현재 스트릭",
+                    label = "현재 연속",
                     value = "${uiState.currentStreak}일",
                     icon = "⚡"
                 )
@@ -308,28 +300,24 @@ private fun MonthlyCalendarCard(uiState: StatisticsUiState) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)  // ✅ 추가
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            // ✅ 헤더 수정
+            Column {
                 Text(
                     text = "📅 ${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.KOREAN)}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryLight
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${uiState.monthlyCheckDates.size}일 체크",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = OrangePrimary
+                    text = "1개 이상 습관 체크한 날: ${uiState.monthlyCheckDates.size}일",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondaryLight
                 )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             // 요일 헤더
             Row(
@@ -347,8 +335,6 @@ private fun MonthlyCalendarCard(uiState: StatisticsUiState) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             // 달력 그리드
             CalendarGrid(
                 currentMonth = currentMonth,
@@ -357,7 +343,6 @@ private fun MonthlyCalendarCard(uiState: StatisticsUiState) {
         }
     }
 }
-
 /**
  * 달력 그리드
  */
@@ -453,35 +438,35 @@ private fun PeriodStatsCard(uiState: StatisticsUiState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = ComponentShapes.StatCard,
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "📈 기간별 통계",
+                text = "기간별 통계",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimaryLight
             )
 
-            PeriodStatRow(
-                label = "이번 주",
-                value = uiState.thisWeekChecks,
-                total = uiState.totalHabits * 7
-            )
-
-            PeriodStatRow(
-                label = "이번 달",
-                value = uiState.thisMonthChecks,
-                total = uiState.totalHabits * LocalDate.now().lengthOfMonth()
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatItem(
+                    label = "이번 주",
+                    value = "${uiState.thisWeekChecks}회"
+                )
+                StatItem(
+                    label = "이번 달",
+                    value = "${uiState.thisMonthChecks}회"
+                )
+            }
         }
     }
 }
@@ -629,86 +614,435 @@ private fun BadgeItem(
 }
 
 /**
- * 습관 랭킹 카드
+ * 습관 랭킹 카드 (현재 사용 안 함 - 카테고리별 랭킹으로 대체)
  */
 @Composable
 private fun HabitRankCard(habitWithStats: HabitWithStats) {
-    val habit = habitWithStats.habit
-    val stats = habitWithStats.statistics
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = ComponentShapes.HabitCard,
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 아이콘
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            color = Color(android.graphics.Color.parseColor(habitWithStats.habit.color)).copy(alpha = 0.2f),
+                            shape = CheckShapes.small
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = habitWithStats.habit.icon,
+                        fontSize = 24.sp
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = habitWithStats.habit.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryLight,
+                        maxLines = 1
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "${habitWithStats.statistics?.totalChecks ?: 0}회",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondaryLight
+                        )
+                        Text(
+                            text = "·",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondaryLight
+                        )
+                        Text(
+                            text = "달성률 ${((habitWithStats.statistics?.completionRate ?: 0f) * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondaryLight
+                        )
+                    }
+                }
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "🔥",
+                    fontSize = 20.sp
+                )
+                Text(
+                    text = "${habitWithStats.statistics?.currentStreak ?: 0}일",  // ✅ "연속" 표시는 아이콘으로 대체
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = OrangePrimary
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 글로벌 습관 랭킹 섹션 (카테고리별)
+ */
+@Composable
+private fun GlobalHabitRankingSection(viewModel: StatisticsViewModel) {
+    var selectedCategoryIndex by remember { mutableStateOf(0) }
+    var selectedHabitIndex by remember { mutableStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val allHabitTitles by viewModel.allHabitTitlesState.collectAsState()
+    val globalRankingState by viewModel.globalRankingState.collectAsState()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = ComponentShapes.StatCard,
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // 헤더
+            Text(
+                text = "🏆 글로벌 습관 랭킹",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimaryLight,
+                modifier = Modifier.padding(20.dp).padding(bottom = 0.dp)
+            )
+
+            // 카테고리 탭
+            ScrollableTabRow(
+                selectedTabIndex = selectedCategoryIndex,
+                containerColor = Color.White,
+                contentColor = OrangePrimary,
+                indicator = { tabPositions ->
+                    if (selectedCategoryIndex < tabPositions.size) {
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedCategoryIndex]),
+                            color = OrangePrimary,
+                            height = 3.dp
+                        )
+                    }
+                },
+                edgePadding = 20.dp,
+                divider = {}
+            ) {
+                HabitCategory.values().forEachIndexed { index, category ->
+                    Tab(
+                        selected = selectedCategoryIndex == index,
+                        onClick = {
+                            selectedCategoryIndex = index
+                            selectedHabitIndex = 0
+                            coroutineScope.launch {
+                                viewModel.loadAllHabits()
+                            }
+                        },
+                        text = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(text = category.icon, fontSize = 16.sp)
+                                Text(
+                                    text = category.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (selectedCategoryIndex == index) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        },
+                        selectedContentColor = OrangePrimary,
+                        unselectedContentColor = TextSecondaryLight
+                    )
+                }
+            }
+
+            HorizontalDivider(color = DividerLight)
+
+            // 선택된 카테고리의 습관들
+            when {
+                allHabitTitles.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "아직 이 카테고리에 습관이 없어요",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondaryLight
+                        )
+                    }
+                }
+
+                else -> {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // 습관 선택 탭
+                        ScrollableTabRow(
+                            selectedTabIndex = selectedHabitIndex,
+                            containerColor = Color.White,
+                            contentColor = OrangePrimary,
+                            indicator = { tabPositions ->
+                                if (selectedHabitIndex < tabPositions.size) {
+                                    TabRowDefaults.SecondaryIndicator(
+                                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedHabitIndex]),
+                                        color = OrangePrimary,
+                                        height = 2.dp
+                                    )
+                                }
+                            },
+                            edgePadding = 20.dp,
+                            divider = {}
+                        ) {
+                            allHabitTitles.forEachIndexed { index, habitTitle ->
+                                Tab(
+                                    selected = selectedHabitIndex == index,
+                                    onClick = {
+                                        selectedHabitIndex = index
+                                        coroutineScope.launch {
+                                            viewModel.loadGlobalRanking(habitTitle)
+                                        }
+                                    },
+                                    text = {
+                                        Text(
+                                            text = habitTitle,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = if (selectedHabitIndex == index) FontWeight.Bold else FontWeight.Normal,
+                                            maxLines = 1
+                                        )
+                                    },
+                                    selectedContentColor = OrangePrimary,
+                                    unselectedContentColor = TextSecondaryLight
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(color = DividerLight)
+
+                        // 랭킹 리스트
+                        GlobalRankingList(
+                            state = globalRankingState,
+                            currentUserId = viewModel.currentUserId
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // 초기 로드
+    LaunchedEffect(Unit) {
+        viewModel.loadAllHabits()
+    }
+}
+
+/**
+ * 글로벌 랭킹 리스트
+ */
+@Composable
+private fun GlobalRankingList(
+    state: GlobalRankingUiState,
+    currentUserId: String
+) {
+    when {
+        state.isLoading -> {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(ComponentShapes.IconBackground)
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                OrangePrimary,
-                                OrangeSecondary
-                            )
-                        )
-                    ),
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = OrangePrimary)
+            }
+        }
+
+        state.error != null -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "😢", fontSize = 32.sp)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = state.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondaryLight
+                    )
+                }
+            }
+        }
+
+        state.rankings.isEmpty() -> {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = habit.icon,
-                    fontSize = 24.sp
+                    text = "아직 랭킹 데이터가 없어요",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondaryLight
                 )
             }
+        }
 
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // 정보
+        else -> {
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // 내 랭킹 (있으면)
+                val myRanking = state.rankings.find { it.userId == currentUserId }
+
+                if (myRanking != null) {
+                    Text(
+                        text = "내 순위",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimaryLight
+                    )
+                    GlobalRankingItem(ranking = myRanking, isMe = true)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = DividerLight)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                // TOP 10
                 Text(
-                    text = habit.title,
-                    style = MaterialTheme.typography.bodyLarge,
+                    text = "TOP 10",
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimaryLight
                 )
-                if (stats != null) {
+
+                state.rankings.take(10).forEach { ranking ->
+                    GlobalRankingItem(
+                        ranking = ranking,
+                        isMe = ranking.userId == currentUserId
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 글로벌 랭킹 아이템
+ */
+@Composable
+private fun GlobalRankingItem(
+    ranking: UserRanking,
+    isMe: Boolean
+) {
+    val rankEmoji = when (ranking.rank) {
+        1 -> "🥇"
+        2 -> "🥈"
+        3 -> "🥉"
+        else -> "${ranking.rank}"
+    }
+
+    val backgroundColor = if (isMe) {
+        OrangePrimary.copy(alpha = 0.1f)
+    } else {
+        Color.Transparent
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = backgroundColor,
+        shape = ComponentShapes.HabitCard
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                // 순위
+                Text(
+                    text = rankEmoji,
+                    fontSize = if (ranking.rank <= 3) 24.sp else 18.sp,
+                    fontWeight = if (ranking.rank <= 3) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier.width(32.dp)
+                )
+
+                // 사용자 정보
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = ranking.userName,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (isMe) FontWeight.Bold else FontWeight.SemiBold,
+                            color = if (isMe) OrangePrimary else TextPrimaryLight,
+                            maxLines = 1
+                        )
+                        if (isMe) {
+                            Text(
+                                text = "나",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier
+                                    .background(
+                                        color = OrangePrimary,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
                     Text(
-                        text = "달성률 ${stats.completionRate.toInt()}%",
+                        text = "${ranking.totalChecks}회 · 달성률 ${(ranking.completionRate * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondaryLight
                     )
                 }
             }
 
-            // 스트릭
-            if (stats != null) {
-                Column(
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Text(
-                        text = "🔥 ${stats.currentStreak}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = OrangePrimary
-                    )
-                    Text(
-                        text = "${stats.totalChecks}회",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondaryLight
-                    )
-                }
+            // 연속 기록
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "🔥", fontSize = 16.sp)
+                Text(
+                    text = "${ranking.currentStreak}일",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isMe) OrangePrimary else TextPrimaryLight
+                )
             }
         }
     }

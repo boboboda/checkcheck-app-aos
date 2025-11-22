@@ -24,6 +24,8 @@ class InitializeUserUseCase @Inject constructor(
             // 1. 기존 User 확인
             val existingUser = userRepository.getUser(userId)
 
+            Log.d(TAG, "기존 User 조회 결과: $existingUser")  // ✅ 핵심!
+
             if (existingUser == null) {
                 // User 문서가 없으면 생성
                 val newUser = User(

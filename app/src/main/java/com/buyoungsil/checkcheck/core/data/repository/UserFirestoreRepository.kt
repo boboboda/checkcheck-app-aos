@@ -1,5 +1,6 @@
 package com.buyoungsil.checkcheck.core.data.repository
 
+import android.util.Log
 import com.buyoungsil.checkcheck.core.data.firebase.UserFirestoreDto
 import com.buyoungsil.checkcheck.core.domain.model.User
 import com.buyoungsil.checkcheck.core.domain.repository.UserRepository
@@ -24,11 +25,26 @@ class UserFirestoreRepository @Inject constructor(
     private val usersCollection = firestore.collection("users")
 
     // ==================== 사용자 정보 가져오기 ====================
+
+
+    // ==================== 사용자 정보 가져오기 ====================
     override suspend fun getUser(userId: String): User? {
         return try {
+            Log.d("UserRepo", "=== getUser 시작: $userId ===")
             val snapshot = usersCollection.document(userId).get().await()
-            snapshot.toObject(UserFirestoreDto::class.java)?.toDomain()
+
+            Log.d("UserRepo", "snapshot exists: ${snapshot.exists()}")
+            Log.d("UserRepo", "snapshot data: ${snapshot.data}")
+
+            val dto = snapshot.toObject(UserFirestoreDto::class.java)
+            Log.d("UserRepo", "DTO 변환 결과: $dto")
+
+            val user = dto?.toDomain()
+            Log.d("UserRepo", "Domain 변환 결과: $user")
+
+            user
         } catch (e: Exception) {
+            Log.e("UserRepo", "❌ getUser 실패", e)
             null
         }
     }

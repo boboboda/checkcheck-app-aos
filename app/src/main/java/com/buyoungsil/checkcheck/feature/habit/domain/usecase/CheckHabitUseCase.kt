@@ -1,7 +1,9 @@
 package com.buyoungsil.checkcheck.feature.habit.domain.usecase
 
 import android.util.Log
+import com.buyoungsil.checkcheck.core.domain.repository.UserRepository
 import com.buyoungsil.checkcheck.feature.habit.domain.repository.HabitRepository
+import com.buyoungsil.checkcheck.feature.ranking.domain.usecase.UpdateGlobalRankingUseCase
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -9,33 +11,18 @@ import javax.inject.Inject
  * 습관 체크 UseCase
  *
  * ✅ 토글 방식에서 **체크만 가능** 방식으로 변경
- *
- * ## 변경 이유
- * 1. 실수로 해제 시 기록 손실 방지
- * 2. 코인 어뷰징 차단 (체크 → 해제 → 재체크)
- * 3. 마일스톤 데이터 정합성 유지
- *
- * ## 동작 방식
- * - 오늘 체크 안 함 → 체크 추가 ✅
- * - 오늘 이미 체크 → 아무 동작 안 함 (Success 반환)
- *
- * @since 2025-01-15 (토글 방식 제거)
+ * ✅ 글로벌 랭킹 자동 업데이트 추가
  */
 class CheckHabitUseCase @Inject constructor(
-    private val repository: HabitRepository
+    private val repository: HabitRepository,
+    private val getHabitStatisticsUseCase: GetHabitStatisticsUseCase,
+    private val updateGlobalRankingUseCase: UpdateGlobalRankingUseCase,
+    private val userRepository: UserRepository
 ) {
     companion object {
         private const val TAG = "CheckHabitUseCase"
     }
 
-    /**
-     * 습관 체크 (체크만 가능, 해제 불가)
-     *
-     * @param habitId 습관 ID
-     * @param userId 사용자 ID
-     * @param date 체크할 날짜 (기본: 오늘)
-     * @return Result<Boolean> - true: 체크 추가됨, false: 이미 체크되어 있음
-     */
     suspend operator fun invoke(
         habitId: String,
         userId: String,
@@ -44,6 +31,7 @@ class CheckHabitUseCase @Inject constructor(
         return try {
             Log.d(TAG, "=== 습관 체크 시작 ===")
             Log.d(TAG, "habitId: $habitId")
+            Log.d(TAG, "userId: $userId")
             Log.d(TAG, "date: $date")
 
             // 1. 이미 체크했는지 확인
@@ -51,15 +39,47 @@ class CheckHabitUseCase @Inject constructor(
 
             if (existingCheck != null) {
                 Log.d(TAG, "⚠️ 이미 체크되어 있음 - 동작 없음")
-                return Result.success(false)  // 이미 체크됨
+                return Result.success(false)
             }
 
             // 2. 새 체크 추가
             Log.d(TAG, "✅ 새 체크 추가")
             repository.toggleHabitCheck(habitId, userId, date)
 
+            // 3. 글로벌 랭킹 자동 업데이트
+            try {
+                Log.d(TAG, "🌐 글로벌 랭킹 업데이트 시작")
+
+                val habit = repository.getHabitById(habitId)
+                val stats = getHabitStatisticsUseCase(habitId).getOrNull()
+                val user = userRepository.getUser(userId)
+
+                Log.d(TAG, "habit: ${habit?.title}")
+                Log.d(TAG, "stats: streak=${stats?.currentStreak}, checks=${stats?.totalChecks}")
+                Log.d(TAG, "user: ${user?.displayName}")
+
+                if (habit != null && stats != null && user != null) {
+                    updateGlobalRankingUseCase(
+                        userId = user.id,
+                        userName = user.displayName ?: "익명 사용자",
+                        habitTitle = habit.title,
+                        currentStreak = stats.currentStreak,
+                        totalChecks = stats.totalChecks,
+                        completionRate = stats.completionRate
+                    ).onSuccess {
+                        Log.d(TAG, "✅ 글로벌 랭킹 업데이트 완료")
+                    }.onFailure { error ->
+                        Log.w(TAG, "⚠️ 글로벌 랭킹 업데이트 실패: ${error.message}")
+                    }
+                } else {
+                    Log.w(TAG, "⚠️ 랭킹 업데이트 스킵: habit=$habit, stats=$stats, user=$user")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "⚠️ 글로벌 랭킹 업데이트 중 오류", e)
+            }
+
             Log.d(TAG, "🎉 습관 체크 완료")
-            Result.success(true)  // 체크 추가됨
+            Result.success(true)
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ 습관 체크 실패", e)
@@ -67,13 +87,6 @@ class CheckHabitUseCase @Inject constructor(
         }
     }
 
-    /**
-     * 특정 날짜의 체크 상태 확인
-     *
-     * @param habitId 습관 ID
-     * @param date 확인할 날짜
-     * @return true: 체크됨, false: 체크 안 됨
-     */
     suspend fun isChecked(
         habitId: String,
         date: LocalDate = LocalDate.now()

@@ -20,3 +20,10 @@ data class StatisticsUiState(
     val isLoading: Boolean = false,
     val error: String? = null
 )
+
+data class GlobalRankingUiState(
+    val habitTitle: String = "",
+    val rankings: List<com.buyoungsil.checkcheck.feature.ranking.domain.model.UserRanking> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null
+)

@@ -1,22 +1,17 @@
-// app/src/main/java/com/buyoungsil/checkcheck/core/data/firebase/UserFirestoreDto.kt
 package com.buyoungsil.checkcheck.core.data.firebase
 
 import com.buyoungsil.checkcheck.core.domain.model.User
-import com.google.firebase.firestore.DocumentId
-import com.google.firebase.firestore.ServerTimestamp
+import com.google.firebase.Timestamp
 import java.util.Date
 
 data class UserFirestoreDto(
-    @DocumentId
-    val id: String = "",
+    val id: String = "",  // ✅ @DocumentId 제거!
     val displayName: String = "",
     val email: String? = null,
     val photoUrl: String? = null,
     val fcmToken: String? = null,
-    @ServerTimestamp
-    val createdAt: Date? = null,
-    @ServerTimestamp
-    val updatedAt: Date? = null
+    val createdAt: Timestamp? = null,  // ✅ Date → Timestamp
+    val updatedAt: Timestamp? = null   // ✅ Date → Timestamp
 ) {
     constructor() : this("", "", null, null, null, null, null)
 
@@ -27,8 +22,8 @@ data class UserFirestoreDto(
             email = email,
             photoUrl = photoUrl,
             fcmToken = fcmToken,
-            createdAt = createdAt?.time ?: System.currentTimeMillis(),
-            updatedAt = updatedAt?.time ?: System.currentTimeMillis()
+            createdAt = createdAt?.toDate()?.time ?: System.currentTimeMillis(),
+            updatedAt = updatedAt?.toDate()?.time ?: System.currentTimeMillis()
         )
     }
 
@@ -40,8 +35,8 @@ data class UserFirestoreDto(
                 email = user.email,
                 photoUrl = user.photoUrl,
                 fcmToken = user.fcmToken,
-                createdAt = Date(user.createdAt),
-                updatedAt = Date(user.updatedAt)
+                createdAt = Timestamp(Date(user.createdAt)),
+                updatedAt = Timestamp(Date(user.updatedAt))
             )
         }
     }
