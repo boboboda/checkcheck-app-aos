@@ -8,6 +8,7 @@ import com.buyoungsil.checkcheck.feature.habit.domain.repository.HabitRepository
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetHabitStatisticsUseCase
 import com.buyoungsil.checkcheck.feature.habit.domain.usecase.GetPersonalHabitsUseCase
 import com.buyoungsil.checkcheck.feature.habit.presentation.list.HabitWithStats
+import com.buyoungsil.checkcheck.feature.ranking.domain.model.UserRanking
 import com.buyoungsil.checkcheck.feature.ranking.domain.usecase.GetGlobalRankingsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -151,40 +152,91 @@ class StatisticsViewModel @Inject constructor(
     }
 
     /**
-     * ✅ 전체 습관 목록 로드 (Firestore globalHabitRankings 컬렉션에서)
+     * 카테고리별 랭킹 로드
      */
-    fun loadAllHabits() {
+    fun loadCategoryRanking(category: String) {
         viewModelScope.launch {
-            try {
-                Log.d(TAG, "=== 전체 습관 목록 로드 시작 ===")
+            _globalRankingState.update {
+                it.copy(isLoading = true, error = null)
+            }
 
-                // Firestore에서 globalHabitRankings 컬렉션의 모든 문서 ID 가져오기
-                // 문서 ID = 습관 제목
+            try {
+                Log.d(TAG, "=== 카테고리 랭킹 로드: $category ===")
+
                 val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                val snapshot = firestore.collection("globalHabitRankings")
+                val currentMonth = getCurrentMonthDoc()
+
+                // 해당 카테고리의 모든 랭킹 문서 조회
+                val snapshot = firestore
+                    .collection("habitRankings")
+                    .whereEqualTo("month", currentMonth)
+                    .whereEqualTo("category", category)
                     .get()
                     .await()
 
-                val habitTitles = snapshot.documents
-                    .map { it.id }
-                    .distinct()
-                    .sorted()
+                Log.d(TAG, "🔥 $category 랭킹 문서 수: ${snapshot.documents.size}")
 
-                _allHabitTitlesState.update { habitTitles }
+                // 모든 유저 랭킹 합치기
+                val allUserRankings = mutableMapOf<String, UserRanking>()
 
-                Log.d(TAG, "✅ 전체 습관 ${habitTitles.size}개 로드 완료")
-                Log.d(TAG, "습관 목록: $habitTitles")
+                snapshot.documents.forEach { doc ->
+                    val rankingsList = doc.get("rankings") as? List<Map<String, Any>> ?: emptyList()
 
-                // 첫 번째 습관의 랭킹 자동 로드
-                if (habitTitles.isNotEmpty()) {
-                    loadGlobalRanking(habitTitles.first())
+                    rankingsList.forEach { map ->
+                        val userId = map["userId"] as? String ?: return@forEach
+                        val streak = (map["currentStreak"] as? Long)?.toInt() ?: 0
+                        val checks = (map["totalChecks"] as? Long)?.toInt() ?: 0
+
+                        // 같은 유저면 스트릭 합산 또는 최대값 선택
+                        val existing = allUserRankings[userId]
+                        if (existing == null || streak > existing.currentStreak) {
+                            allUserRankings[userId] = UserRanking(
+                                userId = userId,
+                                userName = map["userName"] as? String ?: "",
+                                currentStreak = streak,
+                                totalChecks = checks,
+                                completionRate = 0f,
+                                rank = 0
+                            )
+                        }
+                    }
                 }
+
+                // 스트릭 기준 정렬 후 순위 부여
+                val sortedRankings = allUserRankings.values
+                    .sortedByDescending { it.currentStreak }
+                    .mapIndexed { index, ranking ->
+                        ranking.copy(rank = index + 1)
+                    }
+
+                _globalRankingState.update {
+                    it.copy(
+                        habitTitle = category,
+                        rankings = sortedRankings,
+                        isLoading = false,
+                        error = null
+                    )
+                }
+
+                Log.d(TAG, "✅ 카테고리 랭킹 로드 완료: ${sortedRankings.size}명")
+
             } catch (e: Exception) {
-                Log.e(TAG, "❌ 전체 습관 목록 로드 실패", e)
-                _allHabitTitlesState.update { emptyList() }
+                Log.e(TAG, "❌ 카테고리 랭킹 로드 실패", e)
+                _globalRankingState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "랭킹을 불러올 수 없어요"
+                    )
+                }
             }
         }
     }
+
+    private fun getCurrentMonthDoc(): String {
+        val now = java.time.LocalDate.now()
+        return "${now.year}_${now.monthValue.toString().padStart(2, '0')}"
+    }
+
 
     /**
      * 글로벌 랭킹 로드

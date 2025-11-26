@@ -700,157 +700,160 @@ private fun HabitRankCard(habitWithStats: HabitWithStats) {
     }
 }
 
-/**
- * 글로벌 습관 랭킹 섹션 (카테고리별)
- */
 @Composable
-private fun GlobalHabitRankingSection(viewModel: StatisticsViewModel) {
-    var selectedCategoryIndex by remember { mutableStateOf(0) }
-    var selectedHabitIndex by remember { mutableStateOf(0) }
+fun GlobalHabitRankingSection(viewModel: StatisticsViewModel) {
+    val globalRankingState by viewModel.globalRankingState.collectAsState()
+    val currentUserId = viewModel.currentUserId
     val coroutineScope = rememberCoroutineScope()
 
-    val allHabitTitles by viewModel.allHabitTitlesState.collectAsState()
-    val globalRankingState by viewModel.globalRankingState.collectAsState()
+    val categories = listOf(
+        "HEALTH" to "운동",
+        "PRODUCTIVITY" to "생산성",
+        "LIFE" to "생활",
+        "LEARNING" to "학습",
+        "RELATIONSHIP" to "관계",
+        "FINANCE" to "재정"
+    )
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = ComponentShapes.StatCard,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // 헤더
-            Text(
-                text = "🏆 글로벌 습관 랭킹",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimaryLight,
-                modifier = Modifier.padding(20.dp).padding(bottom = 0.dp)
-            )
-
-            // 카테고리 탭
-            ScrollableTabRow(
-                selectedTabIndex = selectedCategoryIndex,
-                containerColor = Color.White,
-                contentColor = OrangePrimary,
-                indicator = { tabPositions ->
-                    if (selectedCategoryIndex < tabPositions.size) {
-                        TabRowDefaults.SecondaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedCategoryIndex]),
-                            color = OrangePrimary,
-                            height = 3.dp
-                        )
-                    }
-                },
-                edgePadding = 20.dp,
-                divider = {}
-            ) {
-                HabitCategory.values().forEachIndexed { index, category ->
-                    Tab(
-                        selected = selectedCategoryIndex == index,
-                        onClick = {
-                            selectedCategoryIndex = index
-                            selectedHabitIndex = 0
-                            coroutineScope.launch {
-                                viewModel.loadAllHabits()
-                            }
-                        },
-                        text = {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(text = category.icon, fontSize = 16.sp)
-                                Text(
-                                    text = category.displayName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (selectedCategoryIndex == index) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                        },
-                        selectedContentColor = OrangePrimary,
-                        unselectedContentColor = TextSecondaryLight
-                    )
-                }
-            }
-
-            HorizontalDivider(color = DividerLight)
-
-            // 선택된 카테고리의 습관들
-            when {
-                allHabitTitles.isEmpty() -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "아직 이 카테고리에 습관이 없어요",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondaryLight
-                        )
-                    }
-                }
-
-                else -> {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // 습관 선택 탭
-                        ScrollableTabRow(
-                            selectedTabIndex = selectedHabitIndex,
-                            containerColor = Color.White,
-                            contentColor = OrangePrimary,
-                            indicator = { tabPositions ->
-                                if (selectedHabitIndex < tabPositions.size) {
-                                    TabRowDefaults.SecondaryIndicator(
-                                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedHabitIndex]),
-                                        color = OrangePrimary,
-                                        height = 2.dp
-                                    )
-                                }
-                            },
-                            edgePadding = 20.dp,
-                            divider = {}
-                        ) {
-                            allHabitTitles.forEachIndexed { index, habitTitle ->
-                                Tab(
-                                    selected = selectedHabitIndex == index,
-                                    onClick = {
-                                        selectedHabitIndex = index
-                                        coroutineScope.launch {
-                                            viewModel.loadGlobalRanking(habitTitle)
-                                        }
-                                    },
-                                    text = {
-                                        Text(
-                                            text = habitTitle,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = if (selectedHabitIndex == index) FontWeight.Bold else FontWeight.Normal,
-                                            maxLines = 1
-                                        )
-                                    },
-                                    selectedContentColor = OrangePrimary,
-                                    unselectedContentColor = TextSecondaryLight
-                                )
-                            }
-                        }
-
-                        HorizontalDivider(color = DividerLight)
-
-                        // 랭킹 리스트
-                        GlobalRankingList(
-                            state = globalRankingState,
-                            currentUserId = viewModel.currentUserId
-                        )
-                    }
-                }
-            }
-        }
-    }
+    var selectedCategoryIndex by remember { mutableIntStateOf(0) }
 
     // 초기 로드
     LaunchedEffect(Unit) {
-        viewModel.loadAllHabits()
+        viewModel.loadCategoryRanking(categories[0].first)
+    }
+
+    Column {
+        Text(
+            text = "🏆 이번 달 랭킹",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimaryLight,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+        )
+
+        // 카테고리 탭
+        ScrollableTabRow(
+            selectedTabIndex = selectedCategoryIndex,
+            containerColor = Color.Transparent,
+            contentColor = OrangePrimary,
+            edgePadding = 16.dp
+        ) {
+            categories.forEachIndexed { index, (categoryKey, categoryName) ->
+                Tab(
+                    selected = selectedCategoryIndex == index,
+                    onClick = {
+                        selectedCategoryIndex = index
+                        coroutineScope.launch {
+                            viewModel.loadCategoryRanking(categoryKey)
+                        }
+                    },
+                    text = {
+                        Text(
+                            text = categoryName,
+                            fontWeight = if (selectedCategoryIndex == index) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 랭킹 리스트
+        GlobalRankingList(
+            state = globalRankingState,
+            currentUserId = currentUserId
+        )
+    }
+}
+
+
+@Composable
+private fun GlobalRankingItem(
+    ranking: UserRanking,
+    isMe: Boolean
+) {
+    val rankEmoji = when (ranking.rank) {
+        1 -> "🥇"
+        2 -> "🥈"
+        3 -> "🥉"
+        else -> "${ranking.rank}"
+    }
+
+    val backgroundColor = if (isMe) {
+        OrangePrimary.copy(alpha = 0.1f)
+    } else {
+        Color.Transparent
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = backgroundColor,
+        shape = ComponentShapes.HabitCard
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                // 순위
+                Text(
+                    text = rankEmoji,
+                    fontSize = if (ranking.rank <= 3) 24.sp else 18.sp,
+                    fontWeight = if (ranking.rank <= 3) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier.width(32.dp)
+                )
+
+                // 사용자 정보
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = ranking.userName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = if (isMe) FontWeight.Bold else FontWeight.SemiBold,
+                        color = if (isMe) OrangePrimary else TextPrimaryLight,
+                        maxLines = 1
+                    )
+                    if (isMe) {
+                        Text(
+                            text = "나",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier
+                                .background(
+                                    color = OrangePrimary,
+                                    shape = RoundedCornerShape(4.dp)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            // 연속 기록만 표시
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "🔥", fontSize = 16.sp)
+                Text(
+                    text = "${ranking.currentStreak}일",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isMe) OrangePrimary else TextPrimaryLight
+                )
+            }
+        }
     }
 }
 
@@ -948,102 +951,3 @@ private fun GlobalRankingList(
     }
 }
 
-/**
- * 글로벌 랭킹 아이템
- */
-@Composable
-private fun GlobalRankingItem(
-    ranking: UserRanking,
-    isMe: Boolean
-) {
-    val rankEmoji = when (ranking.rank) {
-        1 -> "🥇"
-        2 -> "🥈"
-        3 -> "🥉"
-        else -> "${ranking.rank}"
-    }
-
-    val backgroundColor = if (isMe) {
-        OrangePrimary.copy(alpha = 0.1f)
-    } else {
-        Color.Transparent
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = backgroundColor,
-        shape = ComponentShapes.HabitCard
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                // 순위
-                Text(
-                    text = rankEmoji,
-                    fontSize = if (ranking.rank <= 3) 24.sp else 18.sp,
-                    fontWeight = if (ranking.rank <= 3) FontWeight.Bold else FontWeight.Normal,
-                    modifier = Modifier.width(32.dp)
-                )
-
-                // 사용자 정보
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = ranking.userName,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = if (isMe) FontWeight.Bold else FontWeight.SemiBold,
-                            color = if (isMe) OrangePrimary else TextPrimaryLight,
-                            maxLines = 1
-                        )
-                        if (isMe) {
-                            Text(
-                                text = "나",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                modifier = Modifier
-                                    .background(
-                                        color = OrangePrimary,
-                                        shape = RoundedCornerShape(4.dp)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = "${ranking.totalChecks}회 · 달성률 ${(ranking.completionRate * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondaryLight
-                    )
-                }
-            }
-
-            // 연속 기록
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "🔥", fontSize = 16.sp)
-                Text(
-                    text = "${ranking.currentStreak}일",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isMe) OrangePrimary else TextPrimaryLight
-                )
-            }
-        }
-    }
-}
